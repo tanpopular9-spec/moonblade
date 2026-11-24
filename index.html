@@ -1042,7 +1042,7 @@ function buildDungeon(z){
 function enterZone(zi,zpos){
   if(Z&&Z.env){gl.deleteBuffer(Z.env.b);Z.env=null;}
   S.zone=zi;Z=ZONES[zi];
-  if(Z.theme==='forest')buildForest(Z);else buildDungeon(Z);
+  if(Z.theme==='forest')buildForest(Z);else if(Z.build==='lava')buildLava(Z);else buildDungeon(Z);
   document.body.classList.toggle('dungeon',Z.theme==='dungeon');
   mons=[];projs=[];loot=[];warns=[];waves=[];parts=[];fx=[];
   P.x=0;P.z=zpos;P.y=0;P.vx=P.vy=P.vz=0;P.yaw=Z.theme==='dungeon'&&zpos<50?0:(zpos>Z.L/2?Math.PI:0);P.portalCd=60;P.ultS=null;P.spin=0;
@@ -1051,9 +1051,10 @@ function enterZone(zi,zpos){
   initNPCs(Z);curArea='';spawnBots();$('zoneName').textContent=Z.name;buildMini();banner(Z.name);save();
 }
 function spawnMon(t,x,z,lv,reg){const d=MON[t];const sc=d.boss?1+0.08*(lv-1):1+0.22*(lv-1);
-  const m={t,d,x,z,y:d.ai==='fly'?rand(1.4,2.4):0,vx:0,vy:0,vz:0,yaw:rand(0,6.28),lv,reg,hp:Math.round(d.hp*sc),atk:Math.round(d.atk*(1+0.12*(lv-1))),rad:d.rad,h:d.h,
+  const m={t,d,x,z,y:d.ai==='fly'?rand(1.4,2.4):0,vx:0,vy:0,vz:0,yaw:rand(0,6.28),lv,reg,hp:Math.round(d.hp*sc*2.5),atk:Math.round(d.atk*(1+0.12*(lv-1))*1.6),rad:d.rad,h:d.h,
     cd:rand(30,90),ccd:0,anim:rand(0,100),burn:0,burnD:0,poison:0,poisonD:0,slow:0,bleed:0,bleedD:0,stun:0,kbT:0,byP:false,state:'idle',st:0,hx:x,hz:z,wx:x,wz:z,
     flash:0,onG:true,prevY:0,dead:false,deadT:0,announced:false,phase:1};
+  if(!d.boss&&Math.random()<0.12){m.el=1;m.hp=Math.round(m.hp*2);m.atk=Math.round(m.atk*1.35);m.rad*=1.2;m.h*=1.25;}
   m.max=m.hp;m.id=NET.mid++;mons.push(m);return m;}
 function spawnTick(){Z.regions.forEach((r,i)=>{
   if(r.cool>0){r.cool-=45;return;}
@@ -1127,13 +1128,13 @@ function killMon(m){
   if(m.mir)NET.gone.set(m.id,frame);
   m.dead=true;m.deadT=26;m.hp=0;S.kills++;const sc=1+0.1*(m.lv-1);
   if(m.t==='warlord')evBossDown(m);
-  if(m.byP){try{dropGear(m);}catch(e){console.error(e);}gainExp(Math.round(m.d.exp*sc*evMul()));questKill(m);const st=S.st;st.kill++;st.killW[S.cur]=(st.killW[S.cur]||0)+1;if(m.lastCrit)st.critKill++;if(m.t==='skeleton'||m.t==='archer')st.undead++;if(m.t==='treant')st.treant++;if(m.t==='demon')st.demon++;
+  if(m.byP){try{dropGear(m);}catch(e){console.error(e);}gainExp(Math.round(m.d.exp*sc*evMul()*(m.el?2.5:1)));questKill(m);const st=S.st;st.kill++;st.killW[S.cur]=(st.killW[S.cur]||0)+1;if(m.lastCrit)st.critKill++;if(m.t==='skeleton'||m.t==='archer')st.undead++;if(m.t==='treant')st.treant++;if(m.t==='demon')st.demon++;
     if(P.cb&&P.cb.k==='assassin')P.skillCd=0;}
   else partyShare(m,sc);
-  const g=Math.round(ri(m.d.gold[0],m.d.gold[1])*sc*evMul());const n=Math.min(m.d.boss?14:4,Math.max(1,Math.floor(g/4)));
+  const g=Math.max(1,Math.round(ri(m.d.gold[0],m.d.gold[1])*sc*evMul()*0.2*(m.el?2:1)));const n=Math.min(m.d.boss?14:4,Math.max(1,Math.floor(g/4)));
   for(let i=0;i<n;i++)dropLoot(m,'coin',Math.max(1,Math.round(g/n)));
   part(m.x,m.y+m.h/2,m.z,m.d.col,18,0.2,35,0.4);
-  if(m.d.boss){const big=m.t==='demon';
+  if(m.d.boss){const big=m.t==='demon'||m.t==='infernus'||m.t==='magmagiant';
     dropLoot(m,'arrow',big?12:6,'thunder');dropLoot(m,'arrow',big?12:6,'bomb');dropLoot(m,'arrow',big?4:1,'holy');dropLoot(m,'pot',3);
     if(Z.regions[m.reg]&&!m.ev)Z.regions[m.reg].cool=60*90;S.bosses++;shake(0.9);flashA=0.8;
     banner(`🏆 ปราบ ${m.d.name} สำเร็จ!`,'#ffd54f');chat('',m.ev?'ปราบ '+m.d.name+' แล้ว!':'ปราบ '+m.d.name+' ได้! (เกิดใหม่ใน 90 วินาที)',true);
@@ -1301,7 +1302,7 @@ function updP(){
   if(frame%10===0){const W=WEAPONS[S.cur];P.target=findTarget(W.type==='melee'?6:30,W.type==='melee'?1.6:1.0);}
   // portal
   const pt=Z.portal;if(P.portalCd<=0&&Math.hypot(P.x,P.z-pt.z)<1.8){
-    if(S.level>=pt.need){flashA=0.7;enterZone(pt.to,pt.to===1?ZONES[1].spawnZ:ZONES[0].backZ);}else{toast('ต้องการเลเวล '+pt.need+' ขึ้นไป');P.portalCd=90;}}}
+    if(S.level>=pt.need){flashA=0.7;enterZone(pt.to,pt.dz!==undefined?pt.dz:(pt.to===1?ZONES[1].spawnZ:ZONES[0].backZ));}else{toast('ต้องการเลเวล '+pt.need+' ขึ้นไป');P.portalCd=90;}}}
 
 // ================= Update: monsters =================
 function warn(x,z,r,t,fn,col){warns.push({x,z,r,t,mt:t,fn,col:col||'#ff2828'});}
@@ -1321,7 +1322,7 @@ function updMon(m){
   if(m.stun>0){m.stun--;m.vx*=0.8;m.vz*=0.8;mphys(m,fly);return;}
   if(m.kbT>0){m.kbT--;m.vx*=0.88;m.vz*=0.88;mphys(m,fly);return;}
   const sp=m.d.spd*(m.slow>0?0.5:1);
-  const dx=P.x-m.x,dz=P.z-m.z,d=Math.hypot(dx,dz)||1,nx=dx/d,nz=dz/d,agg=P.dead<=0&&d<(m.d.boss?32:17)&&Math.abs(P.y-m.y)<6&&!inTown(P)&&!(P.stealthT>0);
+  const dx=P.x-m.x,dz=P.z-m.z,d=Math.hypot(dx,dz)||1,nx=dx/d,nz=dz/d,agg=P.dead<=0&&d<(m.d.boss?32:22)&&Math.abs(P.y-m.y)<6&&!inTown(P)&&!(P.stealthT>0);
   const R=m.R||Z.regions[m.reg]||{a:1,b:Z.L-1};const face=()=>{m.yaw=lerpAng(m.yaw,Math.atan2(dx,dz),0.15);};
   const walkTo=(s,stop)=>{if(d>stop){m.vx=nx*s;m.vz=nz*s;}else{m.vx*=0.5;m.vz*=0.5;}face();};
   if(m.state==='atk'){m.vx*=0.6;m.vz*=0.6;face();m.st--;if(m.st===8&&d<m.rad+m.reach+0.5&&Math.abs(angDiff(Math.atan2(dx,dz),m.yaw))<1.2&&Math.abs(P.y-m.y)<1.6){hitT(P,m.atk*(m.amult||1),m);}if(m.st<=0)m.state='idle';mphys(m,fly);return;}
@@ -1378,7 +1379,7 @@ function bossTreant(m,d,nx,nz,agg,sp,R,face){const P=TGT;
     else{m.state='stomp';m.st=34;}
     m.cd=Math.round(rand(110,150)*k);}}
 function bossDemon(m,d,nx,nz,agg,sp,R,face){const P=TGT;
-  if(m.hp<m.max*0.5&&m.phase===1){m.phase=2;banner('🔥 ราชาปีศาจปลดผนึกร่างที่สอง!','#ff5252');shake(0.7);flashA=0.5;}
+  if(m.hp<m.max*0.5&&m.phase===1){m.phase=2;banner('🔥 '+m.d.name+' ปลดผนึกร่างที่สอง!','#ff5252');shake(0.7);flashA=0.5;}
   const k=m.phase===2?0.65:1;const baseY=0.3+Math.sin(m.anim*0.05)*0.25;m.y+=(baseY-m.y)*0.1;
   if(m.state==='wind'){m.vx=m.vz=0;if(--m.st<=0){m.state='charge';m.st=48;m.vx=Math.sin(m.yaw)*0.55;m.vz=Math.cos(m.yaw)*0.55;}return;}
   if(m.state==='charge'){if(m.anim%2===0)fx.push({k:'mafter',x:m.x,y:m.y,z:m.z,yaw:m.yaw,t:12,mt:12});
@@ -1391,7 +1392,7 @@ function bossDemon(m,d,nx,nz,agg,sp,R,face){const P=TGT;
     else if(r<0.58){m.state='wind';m.st=40;m.yaw=Math.atan2(nx,nz);txt(m.x,m.y+m.h+0.8,m.z,'!!','#ff5252',true);fx.push({k:'line',x:m.x,z:m.z,yaw:m.yaw,len:26,t:40,mt:40});}
     else if(r<0.85||m.phase===1){const n=m.phase===2?8:6;for(let i=0;i<n;i++){const x=P.x+rand(-7,7),z=P.z+rand(-7,7);
       warn(x,z,1.9,40+i*6,()=>eproj({x,y:20,z,vx:0,vy:-0.55,vz:0,grav:0.004,r:0.7,dmg:m.atk,life:80,col:'#ff3d00',kind:'meteor',src:m,blast:1.9}));}}
-    else{for(let i=0;i<3;i++){const b=spawnMon('bat',m.x+rand(-4,4),m.z+rand(-4,4),m.lv-6,m.reg);b.y=4;b.hx=m.x;b.hz=m.z;}chat('','ราชาปีศาจเรียกค้างคาวเลือด!',true);}
+    else{for(let i=0;i<3;i++){const b=spawnMon(m.t==='infernus'?'firebat':'bat',m.x+rand(-4,4),m.z+rand(-4,4),m.lv-6,m.reg);b.y=4;b.hx=m.x;b.hz=m.z;}chat('',m.d.name+' เรียกฝูงค้างคาว!',true);}
     m.cd=Math.round(rand(95,125)*k);}}
 function separate(){for(let i=0;i<mons.length;i++){const a=mons[i];if(a.dead)continue;for(let j=i+1;j<mons.length;j++){const b=mons[j];if(b.dead)continue;
   const dx=b.x-a.x,dz=b.z-a.z;if(Math.abs(dx)>4||Math.abs(dz)>4)continue;const d=Math.hypot(dx,dz),r=a.rad+b.rad;if(d<r&&d>1e-3){const p=(r-d)/2;const wa=a.d.boss?0:b.d.boss?1:0.5;a.x-=dx/d*p*2*wa;a.z-=dz/d*p*2*wa;b.x+=dx/d*p*2*(1-wa);b.z+=dz/d*p*2*(1-wa);}}}}
@@ -1634,7 +1635,7 @@ function drawHuman(x,y,z,yaw,o){
 function drawMon(m){
   if(m.pvp||Math.abs(m.z-CAM.tz)>70)return;
   const fl=m.flash>0?0.7:0,c=m.d.col,a=m.anim;OP={a:1,f:fl};
-  push();T(m.x,m.y-(m.dead?(1-m.deadT/26)*m.h*0.5:0),m.z);RY(m.yaw);if(m.d.scl)SCL(m.d.scl);if(m.dead){const s=Math.max(0.05,m.deadT/26);SCL(s,s,s);}
+  push();T(m.x,m.y-(m.dead?(1-m.deadT/26)*m.h*0.5:0),m.z);RY(m.yaw);{const ss=(m.d.scl||1)*(m.el?1.25:1);if(ss!==1)SCL(ss);}if(m.dead){const s=Math.max(0.05,m.deadT/26);SCL(s,s,s);}
   switch(m.d.draw||m.t){
   case 'slime':{SPECV=0.9;const sq=m.onG?1+Math.sin(a*0.15)*0.08:0.82;sp(0,0.42*sq,0,0.62/sq,0.45*sq,0.62/sq,c);sp(-0.2,0.65*sq,0.2,0.12,0.09,0.12,'#ffffff',0.4);
     bx(0.17,0.5*sq,0.52/sq,0.08,0.13,0.05,'#112233');bx(-0.17,0.5*sq,0.52/sq,0.08,0.13,0.05,'#112233');SPECV=0.12;break;}
@@ -1745,7 +1746,7 @@ function render(){
   drawShadows();drawWarns();drawWaves();
   for(const f of fx)drawFx(f);
   for(const p of projs)drawProjGlow(p);
-  drawPortalGlow();
+  drawPortalGlow();if(Z.lava){const f=0.85+0.15*Math.sin(frame*0.08);for(const l of Z.lava){if(Math.abs(l.z-CAM.tz)>60)continue;push();T(l.x,0.07,l.z);SCL(l.r*0.98,1,l.r*0.98);draw(GEO.disc,C('#ff6a00'),0.9,f,0);pop();push();T(l.x,0.09,l.z);SCL(l.r*0.5,1,l.r*0.5);draw(GEO.disc,C('#ffd54f'),0.8,1,0);pop();}}
   gl.depthMask(true);
   drawParticles();
   gl.disable(gl.BLEND);
@@ -1854,7 +1855,7 @@ function drawOverlay(){
   drawWX();
   const ds=k=>clamp(14/k,0.55,1.25);
   for(const m of mons){if(m.dead||m.d.boss||m.pvp)continue;const dd=hd(m,P);if((m.hp>=m.max&&dd>9)||dd>26)continue;const p=proj(m.x,m.y+m.h+0.35,m.z);if(!p)continue;const s=ds(p[2]);
-    otext(`Lv.${m.lv} ${m.d.name}`,p[0],p[1]-8*s,11*s,m.lv>S.level+3?'#ff8a80':'#eeeeee',400);
+    otext(`${m.el?'⭐ ':''}Lv.${m.lv} ${m.d.name}`,p[0],p[1]-8*s,11*s,m.el?'#ffd54f':m.lv>S.level+3?'#ff8a80':'#eeeeee',m.el?700:400);
     const w=44*s;oc.fillStyle='rgba(0,0,0,.65)';oc.fillRect(p[0]-w/2-1,p[1]-3*s,w+2,6*s);oc.fillStyle=m.burn?'#ff7a2f':m.poison?'#8dff5a':'#e53935';oc.fillRect(p[0]-w/2,p[1]-2*s,w*m.hp/m.max,4*s);
     if(m.slow>0){oc.fillStyle='#7fd8ff';oc.fillRect(p[0]-w/2,p[1]+3*s,w,2);}if(m.stun>0)otext('⚡',p[0],p[1]-22*s,14*s,'#ffe95a');}
   labelVis(ds);
@@ -2020,6 +2021,35 @@ ZONES[1].npcDefs.push(
    riddle:'...เจ้ามองเห็นข้าหรือ? มีแต่ผู้ที่หลบความตายมานับครั้งไม่ถ้วน และปลิดชีพด้วยคมมีดนับร้อย ที่จะรับเงานี้ไปได้',unlock:'ตอนนี้เจ้าไม่มีชื่อ ไม่มีเงา... มีแต่ความเงียบ',
    lines:['...','เงาไม่ต้องการชื่อ']}
 );
+// ---------- v6: new monsters, bosses, lava cave zone ----------
+Object.assign(MON,{
+  magslime:{name:'สไลม์แมกมา',hp:260,atk:22,spd:0.05,exp:70,gold:[14,22],rad:0.65,h:1.0,col:'#ff6d00',ai:'hop',draw:'slime',scl:1.2},
+  firebat:{name:'ค้างคาวเพลิง',hp:220,atk:24,spd:0.09,exp:75,gold:[14,22],rad:0.55,h:0.7,col:'#ff3d00',ai:'fly',draw:'bat',scl:1.15},
+  ashknight:{name:'อัศวินเถ้าถ่าน',hp:420,atk:30,spd:0.055,exp:110,gold:[20,30],rad:0.5,h:2.1,col:'#8d6e63',ai:'walk',draw:'skeleton',scl:1.12},
+  hellhound:{name:'สุนัขนรก',hp:380,atk:30,spd:0.1,exp:100,gold:[18,28],rad:0.8,h:1.2,col:'#d84315',ai:'lunge',draw:'wolf',scl:1.15},
+  lavagolem:{name:'โกเลมลาวา',hp:1100,atk:42,spd:0.032,exp:230,gold:[40,60],rad:1.2,h:3.0,col:'#bf360c',ai:'golem',draw:'golem',scl:1.08},
+  wolfking:{name:'ราชาหมาป่าจันทร์ดำ',hp:600,atk:16,spd:0.1,exp:380,gold:[160,220],rad:1.5,h:2.2,col:'#283593',ai:'lunge',draw:'wolf',scl:2.0,boss:true},
+  boneknight:{name:'อัศวินกระดูกทมิฬ',hp:1500,atk:24,spd:0.06,exp:1200,gold:[450,600],rad:1.0,h:3.8,col:'#455a64',ai:'walk',draw:'skeleton',scl:2.0,boss:true},
+  magmagiant:{name:'ยักษ์หินลาวา',hp:3500,atk:34,spd:0.035,exp:3200,gold:[900,1200],rad:2.3,h:5.8,col:'#e65100',ai:'golem',draw:'golem',scl:2.0,boss:true},
+  infernus:{name:'จักรพรรดิอัคคีอินเฟอร์นัส',hp:6500,atk:40,spd:0.065,exp:8000,gold:[2500,3200],rad:1.9,h:5.5,col:'#ff6f00',ai:'demon',draw:'demon',scl:1.2,boss:true},
+});
+ZONES[0].regions[2].b=262;ZONES[0].regions.push({a:264,b:292,t:['wolfking'],lv:[8,8],max:1,boss:true,nm:'ถ้ำราชาหมาป่า'});
+ZONES[1].regions.push({a:150,b:178,t:['boneknight'],lv:[15,15],max:1,boss:true,nm:'โถงอัศวินทมิฬ'});
+const WARP={id:'',name:'นักเวทเคลื่อนย้าย',role:'warp',look:{body:'#1a237e',hair:'#e1f5fe',cape:'#7c4dff',head:'hood'},lines:['ข้าเปิดประตูมิติให้ได้ทุกที่ที่เจ้าเคยได้ยินชื่อ','ถ้ำลาวาอัคนีร้อนกว่าที่เจ้าคิด... เตรียมยาไปให้พอ','ระวังบ่อลาวา! ยืนบนนั้นเลือดลดเร็วมาก']};
+ZONES[0].npcDefs.push(Object.assign({},WARP,{id:'warp0',x:-4.6,z:1.6,yaw:0.001}));
+ZONES[1].npcDefs.push(Object.assign({},WARP,{id:'warp1',x:3.6,z:5.6,yaw:0.001}));
+ZONES.push({name:'🌋 ถ้ำลาวาอัคนี',theme:'dungeon',build:'lava',L:400,hw:z=>z>310?22:14,spawnZ:16,backZ:16,
+  town:{name:'ฐานหน้าด่านอัคนี',z1:28},board:{x:5.6,z:25.2},
+  regions:[{a:30,b:115,t:['magslime','firebat','hellhound'],lv:[18,20],max:8,nm:'ทางเดินแมกมา'},{a:115,b:184,t:['ashknight','hellhound','firebat'],lv:[21,23],max:8,nm:'สุสานอัศวินเถ้า'},
+    {a:188,b:212,t:['magmagiant'],lv:[24,24],max:1,boss:true,nm:'ลานยักษ์หินลาวา'},{a:216,b:305,t:['lavagolem','ashknight','firebat'],lv:[25,27],max:7,nm:'เหมืองลาวา'},
+    {a:322,b:388,t:['infernus'],lv:[30,30],max:1,boss:true,nm:'บัลลังก์อัคคี'}],
+  portal:{z:5,to:0,need:0,dz:12,label:'กลับหมู่บ้านจันทร์เสี้ยว'},
+  npcDefs:[
+    {id:'flamia',name:'ผู้บัญชาการเฟลเมีย',role:'guild',x:8.6,z:22.4,look:{body:'#b71c1c',hair:'#ff7043',cape:'#3e2723',head:'helm_open',wk:'greatsword'},lines:['ที่นี่คือแนวหน้าสุดท้ายก่อนบัลลังก์อัคคี','งานบนกระดานเควสตอบแทนดี แต่อันตรายถึงชีวิต','ยักษ์หินลาวาเฝ้าทางอยู่กลางถ้ำ อย่าประมาท']},
+    {id:'emberpriest',name:'นักบวชเถ้าถ่าน',role:'healer',x:-7,z:17,look:{body:'#efebe9',hair:'#bdbdbd',cape:'#ff7043'},lines:['เปลวไฟชำระทุกสิ่ง... แม้แต่บาดแผลของเจ้า','พักก่อนเถิด แล้วค่อยไปต่อ']},
+    {id:'lavashop',name:'ร้านเสบียงหน้าด่าน',role:'shopx',shop:'pot',shopN:'🧪 ร้านเสบียงหน้าด่าน',near:1,x:-6.4,z:23.4,yaw:Math.PI/2,look:{body:'#5d4037',hair:'#212121',cape:'#ff8f00',hat:1},lines:['ยาครบ บัฟครบ ราคาหน้าด่าน!']},
+    Object.assign({},WARP,{id:'warp2',x:3.6,z:9,yaw:0.001})
+  ]});
 const NPCDEF={};ZONES.forEach((zn,zi)=>zn.npcDefs.forEach(d=>NPCDEF[d.id]=Object.assign({zone:zi},d)));
 const npcName=id=>NPCDEF[id]?NPCDEF[id].name:id;
 const townName=zi=>ZONES[zi].town.name;
@@ -2069,6 +2099,20 @@ const QLIST=[
   {id:'d_core',town:1,rank:4,type:'collect',item:'แกนพลังโกเลม',from:['golem'],ch:0.5,n:4,cd:120,title:'แกนพลังโกเลม',desc:'บรอมจะใช้แกนพลังตีอาวุธชิ้นเอก',rw:{gold:600,exp:950,gp:32}},
   {id:'d_demon',town:1,rank:5,type:'boss',t:'demon',n:1,cd:180,title:'ปราบราชาปีศาจ',desc:'[ยากมาก] ยุติราชาปีศาจอัสสุรอีกครั้ง',rw:{gold:1500,exp:2500,arrows:{holy:2},gp:80}},
 ];
+QLIST.push(
+  {id:'f_wking',town:0,rank:2,type:'boss',t:'wolfking',n:1,cd:150,title:'โค่นราชาหมาป่าจันทร์ดำ',desc:'[ยาก] จ่าฝูงยักษ์ซุ่มอยู่ในถ้ำก่อนถึงลานพฤกษา',rw:{gold:350,exp:420,potions:2,gp:30}},
+  {id:'d_bknight',town:1,rank:4,type:'boss',t:'boneknight',n:1,cd:160,title:'อัศวินกระดูกทมิฬ',desc:'[ยากมาก] อัศวินคำสาปขวางโถงกลางดันเจี้ยน',rw:{gold:900,exp:1600,arrows:{bomb:6},gp:50}},
+  {id:'l_slime',town:2,rank:4,type:'kill',t:'magslime',n:12,cd:120,title:'ดับไฟสไลม์แมกมา',desc:'สไลม์แมกมาไหลเข้าใกล้ฐานทุกชั่วโมง',rw:{gold:700,exp:1400,gp:30}},
+  {id:'l_hound',town:2,rank:4,type:'kill',t:'hellhound',n:10,cd:120,title:'ล่าสุนัขนรก',desc:'ฝูงสุนัขนรกล่าหน่วยลาดตระเวนของเรา',rw:{gold:800,exp:1600,gp:32}},
+  {id:'l_ash',town:2,rank:5,type:'collect',item:'เถ้าวิญญาณ',from:['ashknight'],ch:0.5,n:8,cd:120,title:'เถ้าวิญญาณอัศวิน',desc:'นักบวชต้องใช้เถ้าวิญญาณทำพิธีชำระ',rw:{gold:900,exp:1900,gp:36}},
+  {id:'l_patrol',town:2,rank:5,type:'kill',t:'any',n:35,cd:120,title:'ลาดตระเวนถ้ำลาวา',desc:'กวาดล้างมอนสเตอร์ในถ้ำลาวาอัคนี',rw:{gold:1100,exp:2400,gp:40}},
+  {id:'l_golem',town:2,rank:5,type:'kill',t:'lavagolem',n:6,cd:120,title:'ทุบโกเลมลาวา',desc:'โกเลมลาวาขวางเหมืองที่เราต้องการ',rw:{gold:1300,exp:2800,arrows:{bomb:10},gp:44}},
+  {id:'l_giant',town:2,rank:5,type:'boss',t:'magmagiant',n:1,cd:170,title:'ล้มยักษ์หินลาวา',desc:'[นรก] ยักษ์หินลาวาเฝ้ากลางถ้ำ',rw:{gold:2400,exp:5000,arrows:{holy:2},gp:70}},
+  {id:'l_infernus',town:2,rank:6,type:'boss',t:'infernus',n:1,cd:200,title:'ดับจักรพรรดิอัคคี',desc:'[ตำนาน] ปราบอินเฟอร์นัส ผู้ปกครองถ้ำลาวา',rw:{gold:6000,exp:12000,arrows:{holy:5},gp:120}}
+);
+// v6 economy: 80% less gold everywhere
+for(const q of QLIST)if(q.rw&&q.rw.gold)q.rw.gold=Math.max(1,Math.round(q.rw.gold*0.2));
+for(const q of MAINQ)if(q.rw&&q.rw.gold)q.rw.gold=Math.max(1,Math.round(q.rw.gold*0.2));
 const QB={};QLIST.forEach(q=>QB[q.id]=q);
 const RANKS=['F','E','D','C','B','A','S'],RANK_GP=[0,25,70,140,240,380,600];
 const rankOf=gp=>{let r=0;for(let i=0;i<RANK_GP.length;i++)if(gp>=RANK_GP[i])r=i;return r;};
@@ -2157,6 +2201,7 @@ function renderDlg(msg){const n=dlgNpc;if(!n)return;const MQ=MAINQ[S.main.i];let
   if(n.role==='smith'||n.role==='shopsmith')opts.push(['⚒️ ตีบวกอาวุธ','smith']);
   if(n.role==='healer')opts.push(['✨ ขอให้รักษา','heal']);
   if(n.role==='shopx')opts.push(['🛒 เปิดร้าน','shopx']);
+  if(n.role==='warp'){for(const[zi,t,lv]of[[0,'🏠 หมู่บ้านจันทร์เสี้ยว',0],[1,'🏰 ดันเจี้ยนอัสสุร (Lv.6+)',6],[2,'🌋 ถ้ำลาวาอัคนี (Lv.18+)',18]])if(zi!==S.zone)opts.push([t+(S.level<lv?' 🔒':''),'warp:'+zi]);}
   if(n.role==='market')opts.push(['🏪 เปิดตลาดฝากขาย','mkt']);
   if(n.role==='gearshop')opts.push(['🛡️ ดูชุดเกราะวันนี้','gshop'],['🏪 ตลาดฝากขาย','mkt']);
   if(!msg&&opts.length<=1&&n.lines.length>1)opts.push(['💬 คุยต่อ','more']);
@@ -2174,6 +2219,7 @@ $('dlgO').addEventListener('click',e=>{const b=e.target.closest('[data-o]');if(!
   case 'mkt':closeDialog();mkOpen();break;
   case 'gshop':closeDialog();gshopOpen();break;
   case 'shopx':closeDialog();openShop(n.shop,n);break;
+  case 'warp':{const zi=+v,need=[0,6,18][zi]||0;if(S.level<need){renderDlg(`ต้องการเลเวล ${need} ขึ้นไป ตอนนี้เจ้ายังอ่อนเกินไป`);break;}closeDialog();flashA=0.8;SFX.lvl();enterZone(zi,ZONES[zi].spawnZ);toast('🌀 วาร์ปสู่ '+ZONES[zi].name);break;}
   case 'shop':closeDialog();menuTab='arrow';toggleMenu(true);break;
   case 'smith':closeDialog();menuTab='weap';toggleMenu(true);break;
   case 'heal':P.hp=DS.maxHp;P.ult=Math.min(100,P.ult);part(P.x,1,P.z,'#fff3a8',30,0.15,40,0.3,-0.003);SFX.lvl();renderDlg('แสงจันทร์จงรักษาเจ้า... (เลือดเต็มแล้ว)');break;}});
@@ -2537,7 +2583,7 @@ function netMirror(){
   for(const e of pr.ms){if(!Array.isArray(e)||e.length<13)continue;const id=e[0];const t=MONK[e[1]];if(!t)continue;seen.add(id);
     const x=num(e[3],0),y=num(e[4],0),z=num(e[5],0),hp=num(e[7],1),mx=Math.max(1,num(e[8],1));
     let m=byId.get(id);
-    if(!m){if(hp<=0||NET.gone.has(id))continue;m=spawnMon(t,x,z,Math.round(num(e[2],1)),Math.round(num(e[12],0)));m.id=id;m.mir=true;m.ev=e[13]===1?'invade':e[13]===2?'gold':undefined;m.y=y;m.hp=hp;m.max=mx;m._hs=hp;m.announced=true;byId.set(id,m);}
+    if(!m){if(hp<=0||NET.gone.has(id))continue;m=spawnMon(t,x,z,Math.round(num(e[2],1)),Math.round(num(e[12],0)));m.id=id;m.mir=true;m.ev=e[13]===1?'invade':e[13]===2?'gold':undefined;{const want=e[14]===1;if(want!==!!m.el){if(want){m.el=1;m.rad*=1.2;m.h*=1.25;}else{m.el=0;m.rad/=1.2;m.h/=1.25;}}}m.y=y;m.hp=hp;m.max=mx;m._hs=hp;m.announced=true;byId.set(id,m);}
     m.tx=x;m.ty=y;m.tz=z;m.tyaw=num(e[6],m.yaw);m.max=mx;m.state=MSTATES[e[9]]||'idle';m.st=num(e[10],0);m.phase=num(e[11],1);
     if(!m.dead){if(hp<=0){m.hp=0;NET.gone.set(id,frame);killMon(m);}else if(hp<m.hp)m.hp=hp;m._hs=m.hp;}}
   for(const m of mons){if(m.mir&&!seen.has(m.id)&&!m.dead){m.dead=true;m.deadT=0;}if(!m.mir&&!m.dead&&!m.pvp){m.dead=true;m.deadT=0;}}
@@ -2576,7 +2622,7 @@ function netPublish(){
   if(NET.host&&others()){
     const pts=[PL0,...NET.prox.values()];
     const list=mons.filter(m=>!m.pvp&&(!m.dead||m.deadT>0)).map(m=>{let dm=1e9;for(const t of pts){const d=hd(m,t);if(d<dm)dm=d;}return[dm,m];}).filter(e=>e[0]<60||e[1].d.boss).sort((a,b)=>a[0]-b[0]).slice(0,36);
-    o.ms=list.map(([_,m])=>[m.id,MONK.indexOf(m.t),m.lv,r1(m.x),r1(m.y),r1(m.z),r2(m.yaw),Math.max(0,Math.round(m.dead?0:m.hp)),m.max,Math.max(0,MSTATES.indexOf(m.state)),m.st|0,m.phase|0,m.reg|0,m.ev==='invade'?1:m.ev==='gold'?2:0]);
+    o.ms=list.map(([_,m])=>[m.id,MONK.indexOf(m.t),m.lv,r1(m.x),r1(m.y),r1(m.z),r2(m.yaw),Math.max(0,Math.round(m.dead?0:m.hp)),m.max,Math.max(0,MSTATES.indexOf(m.state)),m.st|0,m.phase|0,m.reg|0,m.ev==='invade'?1:m.ev==='gold'?2:0,m.el?1:0]);
     o.ep=[];for(const p of projs){if(p.pl)continue;if(!p.nid){p.nid=NET.pid++;p.born=frame;}if(frame-p.born<45&&o.ep.length<24)o.ep.push([p.nid,p.kind,r2(p.x),r2(p.y),r2(p.z),r3(p.vx),r3(p.vy),r3(p.vz),r2(p.r),Math.round(p.dmg),r3(p.grav||0),p.life,p.blast||0,p.persist?1:0,p.col]);}
     o.wv=[];for(const w of waves){if(w.pl)continue;if(!w.nid){w.nid=NET.pid++;w.born=frame;}if(frame-w.born<45)o.wv.push([w.nid,r2(w.x),r2(w.z),r2(w.r),r3(w.vr),w.max,Math.round(w.dmg),w.col,w.life]);}
     o.wn=[];for(const w of warns){if(!w.nid){w.nid=NET.pid++;w.born=frame;}if(frame-w.born<45&&o.wn.length<16)o.wn.push([w.nid,r2(w.x),r2(w.z),r2(w.r),w.t,w.mt,w.col]);}
@@ -2726,7 +2772,7 @@ function evSpawn(){if(!NET.host||!Z||P.dead>0&&!others())return;
     if(n<9){const t=pick(['wolf','mushroom','slime','wolf','mushroom']);const x=rand(-13,13),z=Math.random()<0.6?rand(28,33):rand(4,9);const m=spawnMon(t,x,z,lv,-1);m.ev='invade';m.R={a:1,b:44};}
     if(EV.el>=240&&EV.bossDone!==EV.key&&!mons.some(m=>m.t==='warlord')){EV.bossDone=EV.key;const m=spawnMon('warlord',0,31,Math.max(8,lv),-1);m.ev='invade';m.R={a:2,b:42};banner('⚠️ แม่ทัพอสูรบุกเข้าหมู่บ้าน!','#ff8a80');shake(0.6);}}
   if(evOn('gold')){const n=mons.filter(m=>m.t==='gslime'&&!m.dead).length;if(n<6){const r=Z.regions[ri(0,2)];const z=rand(r.a+3,r.b-3),hw=Z.hw(z)-1.5;const m=spawnMon('gslime',rand(-hw,hw),z,ri(3,9),-1);m.ev='gold';m.R={a:r.a,b:r.b};}}}
-function evBossDown(m){EV.bossDone=EV.key;if(hd(P,m)<45||m.byP){S.gold+=300;txt(P.x,P.y+2.8,P.z,'+300 ทอง','#ffd54f',true);}
+function evBossDown(m){EV.bossDone=EV.key;if(hd(P,m)<45||m.byP){S.gold+=60;txt(P.x,P.y+2.8,P.z,'+60 ทอง','#ffd54f',true);}
   banner('🏰 ปกป้องหมู่บ้านสำเร็จ!','#7CFC8A');chat('','🏰 แม่ทัพอสูรถูกปราบแล้ว! ทุกคนที่ช่วยป้องกันได้รับ 300 ทอง',true);save();}
 
 // ---------- camera modes ----------
@@ -2800,7 +2846,7 @@ function pvpRecv(p,b,nm){const q=p.presence;
     else if(cum>seen){NET.pvpSeen.set(p.peer,cum);const d=Math.min(cum-seen,400);if(b&&pvpOK(b)){P.pvpBy=p.peer;P.inv=Math.min(P.inv,0);hurtP(d,NET.pvpT.get(p.peer)||null);P.inv=Math.min(P.inv,12);P.pvpBy=null;}}}
   if(Array.isArray(q.dk)){const i=num(q.dk[0],0),killer=String(q.dk[1]||'');const seen=NET.dkSeen.get(p.peer)??0;
     if(i>seen){NET.dkSeen.set(p.peer,i);const kn=killer===NET.me?NET.name:(NET.known.get(killer)||'ผู้เล่น');
-      chat('',`⚔️ ${kn} ปราบ ${nm} ในการประลอง`,true);if(killer===NET.me){S.pvpW=(S.pvpW||0)+1;S.gold+=25;banner('⚔️ ชนะการประลอง! +25 ทอง','#ff8a80');save();}}}}
+      chat('',`⚔️ ${kn} ปราบ ${nm} ในการประลอง`,true);if(killer===NET.me){S.pvpW=(S.pvpW||0)+1;S.gold+=5;banner('⚔️ ชนะการประลอง! +5 ทอง','#ff8a80');save();}}}}
 function togglePvp(){if(!S.pvp&&S.level<5){toast('ต้องเลเวล 5 ขึ้นไปถึงเปิด PvP ได้');return;}S.pvp=!S.pvp;save();toast(S.pvp?'⚔️ เปิด PvP · ตีผู้เล่นที่เปิด PvP ได้นอกเขตเมือง':'🕊️ ปิด PvP แล้ว');netUI();updDock();}
 
 // ---------- party ----------
@@ -3003,7 +3049,7 @@ function dropGear(m){if(m.noLoot||!m.byP||m.pvp)return;const boss=!!m.d.boss,eli
   const ch=boss?1:elite?0.4:0.14+(m.t==='gslime'?0.2:0);if(Math.random()>ch*(bufOn('drop')?2:1))return;
   const n=boss?(Math.random()<0.5?2:1):(Math.random()<0.2?2:1);const lv=Math.max(1,m.lv||1);
   for(let i=0;i<n;i++)dropLoot(m,'gear',mkGear(lv,boss?2.5:elite?0.8:0));}
-function pickGear(g){if(!validGear(g))return;if(S.inv.length>=40){const v=gearSell(g);S.gold+=v;txt(P.x,P.y+2.7,P.z,'กระเป๋าเต็ม · ขายอัตโนมัติ +'+v+' G','#ffd54f');return;}
+function pickGear(g){if(!validGear(g))return;if(S.inv.length>=40){const v=sellV(g);S.gold+=v;txt(P.x,P.y+2.7,P.z,'กระเป๋าเต็ม · ขายอัตโนมัติ +'+v+' G','#ffd54f');return;}
   S.inv.push(g);txt(P.x,P.y+2.7,P.z,SLOTS[g.s].i+' '+gearName(g),RAR[g.r].c,g.r>=2);
   if(g.r>=3){banner(`${g.r===4?'🌟':'✨'} ได้รับ ${gearName(g)}!`,RAR[g.r].c);SFX.lvl();chat('',`ได้รับไอเทม ${gearName(g)}!`,true);}
   else if(g.r===2)chat('',`ได้รับ ${gearName(g)}`,true);
@@ -3012,7 +3058,7 @@ function pickGear(g){if(!validGear(g))return;if(S.inv.length>=40){const v=gearSe
 function equipGear(id,quiet){const i=S.inv.findIndex(x=>x.id===id);if(i<0)return;const g=S.inv[i];const old=S.eq[g.s];S.inv.splice(i,1);if(old)S.inv.push(old);S.eq[g.s]=g;
   const r=P.hp/DS.maxHp;recalc();P.hp=Math.round(r*DS.maxHp);if(!quiet){SFX.coin();toast('สวมใส่ '+gearName(g));}save();bagRender();}
 function unequip(slot){const g=S.eq[slot];if(!g)return;if(S.inv.length>=40){toast('กระเป๋าเต็ม');return;}S.inv.push(g);delete S.eq[slot];const r=P.hp/DS.maxHp;recalc();P.hp=Math.round(r*DS.maxHp);save();bagRender();}
-function sellGear(id){const i=S.inv.findIndex(x=>x.id===id);if(i<0)return;const g=S.inv[i];const v=gearSell(g);S.inv.splice(i,1);S.gold+=v;SFX.coin();toast(`ขาย ${gearName(g)} ได้ ${v} ทอง`);save();bagRender();}
+function sellGear(id){const i=S.inv.findIndex(x=>x.id===id);if(i<0)return;const g=S.inv[i];const v=sellV(g);S.inv.splice(i,1);S.gold+=v;SFX.coin();toast(`ขาย ${gearName(g)} ได้ ${v} ทอง`);save();bagRender();}
 // gear look on the character
 const mixHex=(a,b,k)=>{const p=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16));const x=p(a),y=p(b);return'#'+x.map((v,i)=>Math.round(v+(y[i]-v)*k).toString(16).padStart(2,'0')).join('');};
 function gearLook(b){const e=S.eq||{};const ch=e.chest,lg=e.legs,bt=e.boots,nk=e.neck;
@@ -3057,7 +3103,7 @@ const _itemName0=itemName,_itemCol0=itemCol,_validItem0=validItem,_giveItem0=giv
 itemName=it=>it&&it.k==='g'&&validGear(it.g)?SLOTS[it.g.s].i+' '+gearName(it.g)+' Lv.'+it.g.lv:_itemName0(it);
 itemCol=it=>it&&it.k==='g'&&validGear(it.g)?RAR[it.g.r].c:_itemCol0(it);
 validItem=it=>it&&it.k==='g'?validGear(it.g):_validItem0(it);
-giveItem=it=>{if(it.k==='g'){const g=Object.assign({},it.g,{id:rid(8)});if(S.inv.length>=40){S.gold+=gearSell(g);}else S.inv.push(g);updBagBadge();return;}_giveItem0(it);};
+giveItem=it=>{if(it.k==='g'){const g=Object.assign({},it.g,{id:rid(8)});if(S.inv.length>=40){S.gold+=sellV(g);}else S.inv.push(g);updBagBadge();return;}_giveItem0(it);};
 takeItem=it=>{if(it.k==='g'){const i=S.inv.findIndex(x=>x.id===it.g.id);if(i<0)return false;S.inv.splice(i,1);updBagBadge();return true;}return _takeItem0(it);};
 sellables=()=>{const o=_sellables0();for(const g of[...S.inv].sort((a,b)=>b.r-a.r))o.push({k:'g',g,max:1,label:`${SLOTS[g.s].i} ${gearName(g)} Lv.${g.lv}`});return o;};
 (function(){const a=mkSell;mkSell=function(){const sel=$('mkItem'),opts=sellables(),o=opts[+sel.value];if(o&&o.k==='g'){
@@ -3200,6 +3246,7 @@ function buildTown(g,R){
   for(const s of[-1,1]){flowerBed(g,s*9.5,-8,1.6,5,R);}
   // spawn crest (flat inlay)
   g.m=7;push();T(0,0.012,12);g.ring(2.2,2.6,0,Math.PI*2,30,C('#b39ddb'));pop();push();T(0,0.014,12);g.ring(0,0.9,0,Math.PI*2,20,C('#9575cd'));pop();g.m=-1;
+  g.m=7;push();T(-4.6,0.013,1.6);g.ring(1.0,1.3,0,Math.PI*2,24,C('#7c4dff'));pop();g.m=-1;Z.lights.push({x:-4.6,y:1.2,z:1.6,c:[0.55,0.35,1.0],r:6});
   // guild hall + board (kept)
   guildHall(g,12.8,24);Z.cols.push({x:12.8,z:21.8,r:2.9},{x:12.8,z:26.2,r:2.9});
   questBoard(g,8.2,27.2,-Math.PI/2);Z.cols.push({x:8.2,z:26.2,r:0.25},{x:8.2,z:28.2,r:0.25});
@@ -3331,7 +3378,7 @@ function gearRow(body,g,label,btn,fn,dim){const row=document.createElement('div'
   const d=gearScore(g)-gearScore(S.eq[g.s]);const sm=document.createElement('small');sm.textContent=gearLines(g).join(' · ')+(label?' · '+label:'');
   const cmp=document.createElement('i');cmp.className='shCmp';cmp.textContent=S.eq[g.s]?(d>0?' ▲ดีกว่าที่ใส่':d<0?' ▼ด้อยกว่า':' = เท่ากัน'):' ★ช่องว่าง';cmp.style.color=d>=0||!S.eq[g.s]?'#81c784':'#e57373';sm.appendChild(cmp);
   a.appendChild(n);a.appendChild(sm);const b=document.createElement('button');b.className='btn sm';b.textContent=btn;if(dim)b.classList.add('dim');b.onclick=fn;row.appendChild(ic);row.appendChild(a);row.appendChild(b);body.appendChild(row);}
-function shopRender(){const k=SHOP.k;if(!k)return;const def=TSHOP.find(s=>s.k===k);$('shN').textContent=def?def.n:'ร้านค้า';$('shG').textContent=Math.floor(S.gold).toLocaleString()+' 💰';
+function shopRender(){const k=SHOP.k;if(!k)return;const def=TSHOP.find(s=>s.k===k);$('shN').textContent=(SHOP.npc&&SHOP.npc.shopN)||(def?def.n:'ร้านค้า');$('shG').textContent=Math.floor(S.gold).toLocaleString()+' 💰';
   const tip=$('shTip'),body=$('shBody');body.innerHTML='';tip.innerHTML='';const nt=(t)=>{const d=document.createElement('div');d.className='nt';d.textContent=t;body.appendChild(d);};
   const tips={pot:'ยาบัฟใช้ได้ทันทีที่ซื้อ ซื้อซ้ำเพื่อต่อเวลา (สูงสุด 60 นาที)',food:'อาหารให้บัฟนาน 15–20 นาที · ไอคอนบัฟแสดงใต้หลอดเลือด',scroll:'คัมภีร์ช่วยฟาร์มไวขึ้น เหมาะเปิดก่อนออกล่า',arrow:'ลูกธนูใช้กับอาวุธธนู สลับชนิดได้ที่ปุ่มลูกธนู',
     weap:'ตีบวกอาวุธได้สูงสุด +10',armor:'สินค้าเปลี่ยนทุกวันตามเลเวลของคุณ',jewel:'สร้อยเพิ่ม MP โจมตี และคริติคอล · สินค้าเปลี่ยนทุกวัน',box:'ของที่ได้เข้ากระเป๋า 🎒 ทันที (ช่องว่างจะสวมให้อัตโนมัติ)',buy:'ขายของในกระเป๋าได้เงินทันที · ของหายากแนะนำฝากขายที่หอฝากขาย',tailor:'แต่งตัวฟรี เพื่อนในเซิร์ฟเห็นชุดคุณด้วย',nurse:'รักษาฟรีได้ไม่จำกัด'};
@@ -3343,12 +3390,12 @@ function shopRender(){const k=SHOP.k;if(!k)return;const def=TSHOP.find(s=>s.k===
     const rr=lvP(60);shopRow(body,{i:'🔄',n:'ขอดูสินค้าชุดใหม่',d:'สุ่มสินค้าใหม่ทั้งร้านทันที',p:rr},()=>{S.shopRR[k]=(S.shopRR[k]||0)+1;});
     nt('ชุดที่สวมอยู่: '+(k==='jewel'?['neck']:['chest','legs','boots']).map(s=>SLOTS[s].i+(S.eq[s]?gearName(S.eq[s]):'ว่าง')).join(' · '));return;}
   if(k==='buy'){const inv=S.inv.slice().sort((a,b)=>a.r-b.r||a.lv-b.lv);
-    const bulk=(maxR,lab)=>{const L=S.inv.filter(g=>g.r<=maxR);const v=L.reduce((s,g)=>s+gearSell(g),0);const b=document.createElement('button');b.className='btn sm'+(L.length?'':' dim');b.textContent=`${lab} (${L.length} ชิ้น · ${v.toLocaleString()} 💰)`;
+    const bulk=(maxR,lab)=>{const L=S.inv.filter(g=>g.r<=maxR);const v=L.reduce((s,g)=>s+sellV(g),0);const b=document.createElement('button');b.className='btn sm'+(L.length?'':' dim');b.textContent=`${lab} (${L.length} ชิ้น · ${v.toLocaleString()} 💰)`;
       b.onclick=()=>{if(!L.length)return;askYN('ขายทั้งหมด?',`ขาย ${L.length} ชิ้น ได้ ${v.toLocaleString()} ทอง`,()=>{S.inv=S.inv.filter(g=>g.r>maxR);S.gold+=v;SFX.coin();toast(`ขาย ${L.length} ชิ้น ได้ ${v.toLocaleString()} ทอง`);updBagBadge();save();updHUD();shopRender();});};return b;};
     const rw=document.createElement('div');rw.className='rw shBulk';rw.appendChild(bulk(0,'ขายระดับธรรมดา'));rw.appendChild(bulk(1,'ขายระดับ ≤ ดี'));body.appendChild(rw);
     const r2=document.createElement('div');r2.className='rw';const mb=document.createElement('button');mb.className='btn sm alt';mb.textContent='🏪 ฝากขายให้ผู้เล่น (ได้ราคาดีกว่า)';mb.onclick=()=>{shopClose();mkOpen();};r2.appendChild(mb);body.appendChild(r2);
     nt(`กระเป๋า ${S.inv.length}/40`);if(!inv.length){nt('ยังไม่มีของในกระเป๋า — ล่ามอนสเตอร์เพื่อหาชุดเกราะ');return;}
-    for(const g of inv){const v=gearSell(g);gearRow(body,g,'',v.toLocaleString()+' 💰',()=>{const run=()=>{sellGear(g.id);updBagBadge();updHUD();shopRender();};if(g.r>=3)askYN('ขายของหายาก?',`${gearName(g)} ขายได้ ${v} ทอง`,run);else run();});}return;}
+    for(const g of inv){const v=sellV(g);gearRow(body,g,'',v.toLocaleString()+' 💰',()=>{const run=()=>{sellGear(g.id);updBagBadge();updHUD();shopRender();};if(g.r>=3)askYN('ขายของหายาก?',`${gearName(g)} ขายได้ ${v} ทอง`,run);else run();});}return;}
   for(const it of shopItems(k)){shopRow(body,it,o=>{if(o.box!==undefined){if(S.inv.length>=40){S.gold+=o.p;toast('กระเป๋าเต็ม (40) · คืนเงินแล้ว');return;}const g=boxOpen(o.box);g.id=rid(8);pickGear(g);SHOP.res=g;
       part(P.x,P.y+1.5,P.z,RAR[g.r].c,26,0.15,40,0.3);if(g.r<3)banner(`📦 ${gearName(g)}`,RAR[g.r].c);}else o.buy();
     txt(P.x,P.y+2.6,P.z,it.i+' '+it.n,'#ffd54f');});}
@@ -3450,6 +3497,69 @@ addEventListener('pointerup',hudUp,true);addEventListener('pointercancel',hudUp,
 addEventListener('click',e=>{if(HED.on&&e.target.closest('.hmov')&&!e.target.closest('#hudBar')){e.preventDefault();e.stopPropagation();}},true);
 
 window.TSHOP=TSHOP;window.bufOn=bufOn;
+
+// ---------- v6: lava cave builder, lava hazard, harder monsters ----------
+function buildLava(z){
+  const g=new GB();mReset();const R=seeded(41);Z.cols=[];Z.plats=[];Z.lights=[];Z.lava=[];
+  g.quad([-40,-0.02,-10],[40,-0.02,-10],[40,-0.02,z.L+10],[-40,-0.02,z.L+10],C('#120806'),[0,-1,0]);
+  LQ_BUILD=gfxLevel().hq===0;
+  // lava pools (hazards) placed in the open corridor
+  const pools=[[-6,60,2.2],[7,92,2.6],[-4,138,2.4],[6,168,2.0],[-7,235,2.6],[5,262,2.4],[-3,290,2.2],[-14,340,3.2],[14,345,3.0],[-12,372,2.8],[13,376,2.6]];
+  for(const[x,zz,r]of pools)Z.lava.push({x,z:zz,r});
+  const inLava=(x,zz,m)=>Z.lava.some(l=>Math.hypot(x-l.x,zz-l.z)<l.r+(m||0));
+  g.m=6;
+  for(let zz=0;zz<z.L;zz+=3)for(let x=-24;x<24;x+=3){const cz=zz+1.5,cx=x+1.5;if(Math.abs(cx)>z.hw(cz))continue;if(inLava(cx,cz,-0.6))continue;
+    let col=mixC('#2a1c18','#3a2820',R());if(cz<28)col=mixC('#3a302a','#4a3c32',R());if(cz>310&&Math.abs(cx)<1.8)col=mixC('#4a1a0a','#5a200c',R());
+    g.quad([x+0.06,0,zz+0.06],[x+2.94,0,zz+0.06],[x+2.94,0,zz+2.94],[x+0.06,0,zz+2.94],col,[cx,-1,cz]);}
+  // glowing cracks
+  g.m=-1;for(let i=0;i<120;i++){const zz=30+R()*360,hw=z.hw(zz)-1;const x=(R()*2-1)*hw;push();T(x,0.02,zz);RY(R()*3);g.box(1.6+R()*2,0.02,0.09,C(R()<0.5?'#ff6d00':'#ffab00'));pop();}
+  for(const l of Z.lava){push();T(l.x,0.03,l.z);g.ring(0,l.r,0,Math.PI*2,24,C('#ff5a00'));pop();push();T(l.x,0.05,l.z);g.ring(0,l.r*0.55,0,Math.PI*2,18,C('#ffcc33'));pop();
+    for(let k=0;k<12;k++){const a=k/12*6.28;rock(g,l.x+Math.sin(a)*(l.r+0.25),l.z+Math.cos(a)*(l.r+0.25),0.25+R()*0.3,mixC('#2b1d18','#3e2a22',R()));}
+    Z.lights.push({x:l.x,y:1.2,z:l.z,c:[1.0,0.42,0.08],r:7+l.r,fire:1});}
+  const wall=(x,zz,w,d,h,c)=>{push();T(x,0,zz);g.m=2;g.box(w,h,d,c||mixC('#3b2420','#4a2c24',R()));g.m=-1;pop();};
+  for(let zz=0;zz<310;zz+=6){for(const s of[-1,1])wall(s*15,zz+3,2,6,7.5);}
+  for(let zz=310;zz<z.L;zz+=6){for(const s of[-1,1])wall(s*23,zz+3,2,6,9);}
+  for(const s of[-1,1])wall(s*18.5,310,9,2,8);
+  wall(0,z.L+1,48,2,10);wall(0,-1,32,2,7);
+  // lava falls in wall alcoves + stalagmites
+  for(let zz=18;zz<306;zz+=24)for(const s of[-1,1]){push();T(s*13.9,0,zz);g.box(0.2,7,1.6,C('#ff6a00'));pop();push();T(s*13.4,0.02,zz);g.box(1.2,0.04,2.2,C('#ffb300'));pop();Z.lights.push({x:s*13,y:3,z:zz,c:[1.0,0.45,0.1],r:9,fire:1});}
+  for(let zz=10;zz<306;zz+=12)for(const s of[-1,1]){g.m=2;push();T(s*13.4,0,zz+6);g.cyl(0.35,0.9,3+R()*3,7,mixC('#3b2420','#52342a',R()),true,true);pop();g.m=-1;Z.cols.push({x:s*13.4,z:zz+6,r:0.9});}
+  for(let i=0;i<50;i++){const zz=34+R()*350,hw=z.hw(zz);const x=(R()<0.5?-1:1)*(hw-1.3-R()*2);if(inLava(x,zz,1.5))continue;rock(g,x,zz,0.5+R()*0.8,mixC('#2b1d18','#4a3026',R()));Z.cols.push({x,z:zz,r:0.6});}
+  // obsidian crystals
+  for(let i=0;i<30;i++){const zz=40+R()*340,hw=z.hw(zz);const x=(R()<0.5?-1:1)*(hw-0.8-R()*1.5);push();T(x,0,zz);RZ((R()-0.5)*0.5);g.cyl(0,0.35,1.4+R()*1.6,5,C(R()<0.5?'#311b92':'#4a148c'),true,true,0.3);pop();}
+  // arena: lava moat ring and pillars
+  for(let zz=318;zz<396;zz+=13)for(const s of[-1,1]){g.m=2;push();T(s*20.4,0,zz);g.cyl(1.0,1.2,10,14,C('#3b2420'),true,true);pop();g.m=-1;Z.cols.push({x:s*20.4,z:zz,r:1.3});
+    push();T(s*19.2,4.5,zz);g.box(0.5,0.3,0.3,C('#5d4037'));pop();Z.lights.push({x:s*19,y:5,z:zz,c:[1,0.45,0.1],r:12,fire:1});}
+  for(const[x,zz]of[[-9,330],[9,330],[-9,380],[9,380]]){push();T(x,0,zz);g.cyl(0.3,0.45,1.5,6,C('#2b2b2b'));T(0,1.5,0);g.cyl(1,0.55,0.55,8,C('#424242'));T(0,0.5,0);g.sph(0.45,8,C('#ff6d00'));pop();Z.lights.push({x,y:2.6,z:zz,c:[1.0,0.35,0.05],r:15,fire:2});Z.cols.push({x,z:zz,r:0.85});}
+  push();T(0,0,395);g.box(12,0.6,5,C('#1c1416'));T(0,0.6,0);g.box(8,0.6,3.6,C('#2a1a1e'));T(0,0.6,0.5);g.box(3.4,1.4,2,C('#3e0d0d'));T(0,1.4,0.8);g.box(3.4,4.2,0.6,C('#3e0d0d'));
+  for(const s of[-1,1]){push();T(s*1.8,4.2,0);g.cyl(0,0.3,1.4,5,C('#ff8f00'));pop();}pop();
+  // forward base camp
+  palisade(g,-14.4,-4.4,28.8);palisade(g,4.4,14.4,28.8);for(let x=4.4;x<=14.4;x+=1){Z.cols.push({x,z:28.8,r:0.5},{x:-x,z:28.8,r:0.5});}
+  pennant(g,-4.6,28.6,4,'#ff6d00');pennant(g,4.6,28.6,4,'#ff6d00');pennant(g,-10,10,3.4,'#b71c1c');
+  tent(g,-9,8,1.1,'#5d4037');tent(g,9.5,13.5,1.2,'#4e342e');tent(g,10,20.5,1.4,'#b71c1c');Z.cols.push({x:-9,z:8,r:2},{x:9.5,z:13.5,r:2.2},{x:10,z:20.5,r:2.5});
+  questBoard(g,5.6,25.2,-Math.PI/2);Z.cols.push({x:5.6,z:24.2,r:0.25},{x:5.6,z:26.2,r:0.25});
+  push();T(-7.6,0,23.4);g.box(1.8,0.95,0.7,C('#8d6e63'));T(0,0.95,0);g.box(1.9,0.08,0.8,C('#5d4037'));pop();Z.cols.push({x:-7.4,z:23.4,r:0.7});
+  push();T(-2,0,13);for(let i=0;i<8;i++){const a=i/8*Math.PI*2;push();T(Math.sin(a)*0.7,0.1,Math.cos(a)*0.7);g.sph(0.22,5,C('#5f5f66'));pop();}pop();Z.cols.push({x:-2,z:13,r:0.9});
+  Z.lights.push({x:-2,y:1,z:13,c:[1.0,0.55,0.2],r:11,fire:1});
+  g.m=7;push();T(3.6,0.02,9);g.ring(1.0,1.3,0,Math.PI*2,24,C('#7c4dff'));pop();g.m=-1;
+  for(const[x,zz]of[[-12,24],[-12.4,25.4],[12,4],[-4,4]]){push();T(x,0,zz);g.box(1,1,1,C('#6d4c41'));pop();Z.cols.push({x,z:zz,r:0.7});}
+  const PL=[[6,75,3,3,1.4],[-6,120,3,4,1.3],[5,200,4,3,1.6],[-6,250,3,3,1.5],[-15,356,4,4,1.6],[15,362,4,4,1.6]];
+  for(const[x,zz,w,d,h]of PL){push();T(x,0,zz);g.box(w,h,d,C('#2b1d18'));T(0,h,0);g.box(w,0.1,d,C('#5a2a14'));pop();Z.plats.push({x,z:zz,w,d,h});}
+  Z.lights.push({x:0,y:2,z:z.portal.z,c:[0.3,1.0,0.5],r:12});
+  Z.env=g.build();
+  Z.fogA=lin('#3a140a');Z.fogB=lin('#0c0403');Z.fogR=[8,34];Z.L_dir=nrm([0.2,0.95,0.25]);Z.L_c=[0.34,0.17,0.1];Z.sky=[0.14,0.06,0.035];Z.gnd=[0.06,0.03,0.02];Z.expo=2.6;Z.stars=0;
+}
+// lava hazard + embers
+function lavaTick(){if(!Z||!Z.lava||!Z.lava.length)return;
+  if(frame%3===0){const l=pick(Z.lava);if(Math.abs(l.z-P.z)<40)parts.push({x:l.x+rand(-l.r,l.r)*0.6,y:0.2,z:l.z+rand(-l.r,l.r)*0.6,vx:rand(-0.01,0.01),vy:rand(0.03,0.07),vz:rand(-0.01,0.01),l:50,ml:50,c:C(Math.random()<0.5?'#ffab40':'#ff6d00'),s:0.18,g:-0.0005});}
+  if(P.dead>0||P.y>0.35||frame%15!==0)return;
+  for(const l of Z.lava)if(Math.hypot(P.x-l.x,P.z-l.z)<l.r-0.15){const inv=P.inv;P.inv=0;hurtP(Math.max(4,Math.round(DS.maxHp*0.07)),null);P.inv=inv;txt(P.x,P.y+2.2,P.z,'🔥 ลาวา!','#ff6d00');break;}}
+const _gt6=gearTick;gearTick=function(){_gt6();lavaTick();};
+// harder monsters: faster, denser, bigger aggro (stats in spawnMon)
+for(const k in MON){const d=MON[k];if(!d.__v6){d.__v6=1;d.spd*=1.15;}}
+for(const zn of ZONES)for(const r of zn.regions)if(!r.boss&&!r.__v6){r.__v6=1;r.max=Math.round(r.max*1.3);}
+for(const k of['magslime','firebat','ashknight','hellhound','lavagolem','wolfking','boneknight','magmagiant','infernus'])if(!MONK.includes(k))MONK.push(k);
+const sellV=g=>Math.max(1,Math.round(gearSell(g)*0.2));
 
 // ================= Start / loop =================
 let glOK=false;
