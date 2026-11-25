@@ -392,6 +392,11 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
 </div>
 
 <script>
+const BUILD='v9.5';
+(function(){try{fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/const BUILD='([^']+)'/);
+  if(m&&m[1]!==BUILD&&sessionStorage.getItem('mbUpd')!==m[1]){sessionStorage.setItem('mbUpd',m[1]);location.replace(location.pathname+'?v='+m[1]);}}).catch(()=>{});}catch(e){}})();
+</script>
+<script>
 'use strict';
 // ================= Utilities =================
 const rand=(a,b)=>a+Math.random()*(b-a);
@@ -1113,7 +1118,7 @@ function dealDmg(m,amt,o){o=o||{};if(m.dead)return 0;
   txt(m.x,m.y+m.h+0.3,m.z,dmg,crit?'#ffd54f':'#fff',crit);
   P.hitCombo++;P.comboTimer=150;questCombo();
   if(!P.ultS)P.ult=Math.min(100,P.ult+(o.ug===undefined?1.7:o.ug)*DS.ultGain);
-  {const stl=DS.steal+(P.cb&&P.cb.k==='abyss'?0.1:0);if(stl)P.hp=Math.min(DS.maxHp,P.hp+dmg*stl);}
+  {const stl=DS.steal+(P.cb&&P.cb.k==='abyss'?0.1:0);if(stl)P.hp=Math.min(DS.maxHp,P.hp+dmg*stl*(m&&m.pvp?0.3:1));}
   if(S.cls.cur==='moon'&&P.hitCombo%15===0&&!o.dot)projs.push({x:P.x,y:P.y+1,z:P.z,vx:Math.sin(P.yaw)*0.42,vy:0,vz:Math.cos(P.yaw)*0.42,r:1.5,pl:1,kind:'wave',base:pbase()*1.5,life:35,hit:new Set(),col:'#bfe4ff',yaw:P.yaw,ug:0});
   if(DS.bleed&&!o.dot&&Math.random()<0.3){m.bleed=180;m.bleedD=Math.max(1,dmg*0.12);}
   part(m.x,m.y+m.h*0.55,m.z,crit?'#ffd54f':'#ffffff',crit?10:5,0.18,18,0.3);
@@ -1164,7 +1169,8 @@ function hurtP(dmg,src){
   if(P.dead>0||P.inv>0||P.dashT>0||(P.ultS&&P.ultS.inv))return;
   if(P.shieldOn){P.shieldOn=false;P.shieldT=0;P.inv=30;fx.push({k:'ring',x:P.x,y:P.y+1,z:P.z,r:0.8,t:18,mt:18,col:'#80d8ff',up:1});txt(P.x,P.y+2.4,P.z,'บล็อก!','#80d8ff');return;}
   let d=Math.max(1,Math.round(dmg*(1-DS.defPct)-DS.defFlat));
-  if(P.cb&&P.cb.k==='knight'){if(src&&!src.dead&&src.hp)dealDmg(src,dmg*0.5,{ug:0});d=Math.max(1,Math.round(d*0.3));}
+  if(P.pvpBy){d=Math.max(Math.round(dmg*0.2),Math.round(dmg*(1-Math.min(0.45,DS.defPct))-DS.defFlat*0.25));P.pvpCT=300;}
+  if(P.cb&&P.cb.k==='knight'){if(src&&!src.dead&&src.hp&&!src.pvp)dealDmg(src,dmg*0.5,{ug:0});d=Math.max(1,Math.round(d*(P.pvpBy?0.65:0.3)));}
   S.st.hitsTaken++;P.stealthT=0;
   P.hp-=d;P.inv=45;txt(P.x,P.y+2.3,P.z,'-'+d,'#ff5252',true);shake(0.3);SFX.hurt();P.hitCombo=Math.floor(P.hitCombo/2);
   if(!DS.noKb&&!(P.cb&&P.cb.k==='abyss')&&src){const dd=hd(P,src)||1;P.vx=(P.x-src.x)/dd*0.25;P.vz=(P.z-src.z)/dd*0.25;P.vy=0.15;}
@@ -1277,7 +1283,7 @@ function updP(){
   if(P.cb)updClsBuff();
   if(P.comboWin<=0)P.atkStep=0;
   if(P.comboTimer>0)P.comboTimer--;else P.hitCombo=0;
-  P.hp=Math.min(DS.maxHp,P.hp+DS.regen/60*(inTown(P)?6:1)*(P.regenT>0?4:1));
+  if(P.pvpCT>0)P.pvpCT--;P.hp=Math.min(DS.maxHp,P.hp+DS.regen/60*(inTown(P)?6:1)*(P.regenT>0?4:1)*(P.pvpCT>0?0.15:1));
   if(DS.shield&&!P.shieldOn){P.shieldT++;if(P.shieldT>=480)P.shieldOn=true;}
   if(P.ultS){updUlt();if(P.ultS&&P.ultS.lock)return;}
   let ix=JOY.id!==null?JOY.x:(KEYS.KeyD?1:0)-(KEYS.KeyA?1:0),iy=JOY.id!==null?JOY.y:(KEYS.KeyW?1:0)-(KEYS.KeyS?1:0);
@@ -2851,7 +2857,7 @@ function updPvp(m){const loss=1e6-m.hp;if(loss>0){NET.pvpOut.set(m.peer,(NET.pvp
 function pvpRecv(p,b,nm){const q=p.presence;
   if(Array.isArray(q.pk)){let cum=0;for(const e of q.pk)if(Array.isArray(e)&&e[0]===NET.me)cum=num(e[1],0);
     const seen=NET.pvpSeen.get(p.peer)??0;if(cum<seen)NET.pvpSeen.set(p.peer,cum);
-    else if(cum>seen){NET.pvpSeen.set(p.peer,cum);const d=Math.min(cum-seen,400);if(b&&pvpOK(b)){P.pvpBy=p.peer;P.inv=Math.min(P.inv,0);hurtP(d,NET.pvpT.get(p.peer)||null);P.inv=Math.min(P.inv,12);P.pvpBy=null;}}}
+    else if(cum>seen){NET.pvpSeen.set(p.peer,cum);const d=Math.min(cum-seen,Math.max(400,DS.maxHp*0.3));if(b&&pvpOK(b)){P.pvpBy=p.peer;P.inv=Math.min(P.inv,0);hurtP(d,NET.pvpT.get(p.peer)||null);P.inv=Math.min(P.inv,12);P.pvpBy=null;}}}
   if(Array.isArray(q.dk)){const i=num(q.dk[0],0),killer=String(q.dk[1]||'');const seen=NET.dkSeen.get(p.peer)??0;
     if(i>seen){NET.dkSeen.set(p.peer,i);const kn=killer===NET.me?NET.name:(NET.known.get(killer)||'ผู้เล่น');
       chat('',`⚔️ ${kn} ปราบ ${nm} ในการประลอง`,true);if(killer===NET.me){S.pvpW=(S.pvpW||0)+1;S.gold+=5;banner('⚔️ ชนะการประลอง! +5 ทอง','#ff8a80');save();}}}}
@@ -3337,7 +3343,7 @@ const _ge5=gainExp;gainExp=function(n){if(bufOn('exp'))n=Math.round(n*1.3);_ge5(
 function bufRender(){let el=$('bufRow');if(!el){const pb=document.querySelector('#hud .pbox');if(!pb)return;el=document.createElement('div');el.id='bufRow';pb.appendChild(el);}
   const now=Date.now();let h='';for(const k in BUFS)if(bufOn(k)){const m=Math.ceil((S.buf[k]-now)/60e3);h+=`<span title="${BUFS[k].n}">${BUFS[k].i}${m}'</span>`;}if(el.innerHTML!==h)el.innerHTML=h;}
 function townTick(){if(frame%60===0){const now=Date.now();let ch=0;for(const k in S.buf)if(!(S.buf[k]>now)){delete S.buf[k];ch=1;if(BUFS[k])toast(`หมดฤทธิ์ ${BUFS[k].i} ${BUFS[k].n}`);}
-    if(ch){recalcKeep();save();}if(bufOn('regen')&&P.dead<=0&&P.hp<DS.maxHp)P.hp=Math.min(DS.maxHp,P.hp+DS.maxHp*0.01);bufRender();}
+    if(ch){recalcKeep();save();}if(bufOn('regen')&&P.dead<=0&&P.hp<DS.maxHp)P.hp=Math.min(DS.maxHp,P.hp+DS.maxHp*0.01*(P.pvpCT>0?0.15:1));bufRender();}
   if(SHOP.k&&frame%20===0&&SHOP.npc&&(Math.hypot(P.x-SHOP.npc.x,P.z-SHOP.npc.z)>6||P.dead>0))shopClose();}
 const _gt5=gearTick;gearTick=function(){_gt5();townTick();};
 
@@ -3602,8 +3608,18 @@ function kayProgs(){if(!gl)return;try{
   if(!KAY.SP){KAY.SP=mkProg(KSVS,PREC+SH_FS);['aP','aJ','aW'].forEach(n=>KAY.SA[n]=gl.getAttribLocation(KAY.SP,n));['uLVP','uM','uB','uPS'].forEach(n=>KAY.SU[n]=gl.getUniformLocation(KAY.SP,n));}
   KAY.stamp=-1;return true;}catch(e){console.error(e);KAY.err=String(e&&e.message||e);return false;}}
 const _initPrograms7=initPrograms;initPrograms=function(){_initPrograms7();if(KAY.ok||KAY.loading)kayProgs();};
+async function kayFetchRaw(url,lab){const r=await fetch(url,{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);
+  const tot=+r.headers.get('content-length')||0;if(!r.body||!r.body.getReader){return new Uint8Array(await r.arrayBuffer());}
+  const rd=r.body.getReader(),parts=[];let got=0;for(;;){const{done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;kayProg(tot?got/tot:0,got);}
+  const out=new Uint8Array(got);let o=0;for(const q of parts){out.set(q,o);o+=q.length;}return out;}
+function kayProg(f,got){let el=document.getElementById('kayLd');if(!el){el=document.createElement('div');el.id='kayLd';el.style.cssText='position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:9999;background:rgba(20,12,6,.85);color:#ffd54f;border:2px solid #c9a24a;border-radius:14px;padding:6px 14px;font:600 13px sans-serif;pointer-events:none';document.body.appendChild(el);}
+  el.textContent='⏳ กำลังโหลดโมเดล 3D '+(f>0?Math.round(f*100)+'%':(got/1048576).toFixed(1)+' MB');}
+async function kayFetch(){try{
+    if(typeof DecompressionStream==='function'){const z=await kayFetchRaw('moonblade3d.gz?v=92');if(z[0]===0x1f&&z[1]===0x8b){const ds=new Blob([z]).stream().pipeThrough(new DecompressionStream('gzip'));const ab=await new Response(ds).arrayBuffer();if(ab.byteLength>=KMETA.size)return ab;}else if(z.byteLength>=KMETA.size)return z.buffer;}
+  }catch(e){console.warn('gz load failed, fallback',e);}
+  const u=await kayFetchRaw('moonblade3d.bin?v=92');return u.buffer;}
 async function kayLoad(){if(!gl||KAY.ok||KAY.loading)return;KAY.loading=1;
-  try{const r=await fetch('moonblade3d.bin?v=7',{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);const ab=await r.arrayBuffer();if(ab.byteLength<KMETA.size)throw new Error('ไฟล์ไม่ครบ');
+  try{const ab=await kayFetch();if(ab.byteLength<KMETA.size)throw new Error('ไฟล์ไม่ครบ');
     const u8=new Uint8Array(ab);
     for(const k in KMETA.pieces){const[vo,n,io,ni]=KMETA.pieces[k];const v=u8.slice(vo,vo+n*20);
       if(/_cape$/.test(k))for(let i=0;i<n;i++){const o=i*20+9;const l=Math.max(v[o],v[o+1],v[o+2]);const g=Math.min(255,150+l*0.45);v[o]=v[o+1]=v[o+2]=g;}
@@ -3614,7 +3630,7 @@ async function kayLoad(){if(!gl||KAY.ok||KAY.loading)return;KAY.loading=1;
     for(const k in KMETA.anims){const[o,nf,dur,loop]=KMETA.anims[k];KAY.anims[k]={d:new Int16Array(ab,o,nf*KAY.NB*12),nf,dur,loop};}
     if(kayProgs()===false)throw new Error(KAY.err);KAY.ok=true;window.KAYON=1;try{kwBuild(ab);}catch(e){console.warn('world props',e);}try{await kaInit(ab);}catch(e){console.warn(e);}rebuildEnv();console.log('KayKit 3D ready');}
   catch(e){console.warn('3D characters unavailable:',e);KAY.err=String(e&&e.message||e);}
-  KAY.loading=0;}
+  KAY.loading=0;const ld=document.getElementById('kayLd');if(ld)ld.remove();}
 function kaySample(key,t,out){const a=KAY.anims[key];if(!a)return false;const N=KAY.NB*12;let f=t*KMETA.fps;
   if(a.loop){const L=a.nf-1;f=((f%L)+L)%L;}else f=clamp(f,0,a.nf-1);
   const i0=Math.floor(f),i1=Math.min(i0+1,a.nf-1),fr=f-i0,d=a.d,o0=i0*N,o1=i1*N,k0=(1-fr)/4096,k1=fr/4096;
