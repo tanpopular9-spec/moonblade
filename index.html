@@ -1642,14 +1642,15 @@ function drawHuman(x,y,z,yaw,o){
 function drawMon(m){
   if(m.pvp||Math.abs(m.z-CAM.tz)>70)return;
   const fl=m.flash>0?0.7:0,c=m.d.col,a=m.anim;OP={a:1,f:fl};
-  push();T(m.x,m.y-(m.dead?(1-m.deadT/26)*m.h*0.5:0),m.z);RY(m.yaw);{const ss=(m.d.scl||1)*(m.el?1.25:1);if(ss!==1)SCL(ss);}if(m.dead){const s=Math.max(0.05,m.deadT/26);SCL(s,s,s);}
+  const kc=kcOn(m);push();T(m.x,m.y-(m.dead&&!kc?(1-m.deadT/26)*m.h*0.5:0),m.z);RY(m.yaw);{const ss=(m.d.scl||1)*(m.el?1.25:1);if(ss!==1)SCL(ss);}if(m.dead&&!kc){const s=Math.max(0.05,m.deadT/26);SCL(s,s,s);}
+  if(kc&&kayC(m,kc)){pop();OP={a:1,f:0};return;}
   switch(m.d.draw||m.t){
   case 'slime':{SPECV=0.9;const sq=m.onG?1+Math.sin(a*0.15)*0.08:0.82;sp(0,0.42*sq,0,0.62/sq,0.45*sq,0.62/sq,c);sp(-0.2,0.65*sq,0.2,0.12,0.09,0.12,'#ffffff',0.4);
     bx(0.17,0.5*sq,0.52/sq,0.08,0.13,0.05,'#112233');bx(-0.17,0.5*sq,0.52/sq,0.08,0.13,0.05,'#112233');SPECV=0.12;break;}
   case 'mushroom':{push();T(0,0,0);SCL(0.26,0.75,0.26);draw(GEO.cyl,C('#f5e6c8'),1,0,fl);pop();const sq=m.st>0?0.8:1;sp(0,0.85,0,0.7,0.45*sq,0.7,c);
     for(const[x,y,z]of[[0.3,1.1,0.3],[-0.35,1.05,0.15],[0,1.22,-0.2],[0.1,1.0,0.55]])sp(x,y,z,0.1,0.07,0.1,'#ffffff');
     bx(0.1,0.5,0.25,0.06,0.1,0.04,'#222222');bx(-0.1,0.5,0.25,0.06,0.1,0.04,'#222222');break;}
-  case 'wolf':{const run=Math.hypot(m.vx,m.vz)>0.01?Math.sin(a*0.35)*0.7:0;const fur=fl?'#ffffff':c,dk=fl?'#ffffff':'#2b3566';
+  case 'wolf':{if(kayWolf(m))break;const run=Math.hypot(m.vx,m.vz)>0.01?Math.sin(a*0.35)*0.7:0;const fur=fl?'#ffffff':c,dk=fl?'#ffffff':'#2b3566';
     for(const[x,z,s]of[[0.2,0.42,1],[-0.2,0.42,-1],[0.2,-0.48,-1],[-0.2,-0.48,1]]){push();T(x,0.66,z);RX(run*s);push();T(0,-0.64,0);SCL(0.075,0.64,0.085);draw(GEO.cyl,C(dk),1,0,fl);pop();pop();}
     sp(0,0.8,-0.2,0.3,0.3,0.58,fur);sp(0,0.88,0.28,0.33,0.36,0.4,fur);
     push();T(0,1.02,0.66);RX(m.state==='wind'?0.3:0);sp(0,0,0,0.2,0.2,0.24,fur);push();T(0,-0.05,0.16);RX(Math.PI/2);SCL(0.1,0.3,0.09);draw(GEO.cone,C(fur),1,0,fl);pop();
@@ -1706,7 +1707,7 @@ function setupLights(){
   for(let i=0;i<4;i++){const l=L[i];if(l){PLbuf[i*3]=l.x;PLbuf[i*3+1]=l.y;PLbuf[i*3+2]=l.z;PLcbuf[i*4]=l.c[0]*2.4;PLcbuf[i*4+1]=l.c[1]*2.4;PLcbuf[i*4+2]=l.c[2]*2.4;PLcbuf[i*4+3]=l.r;}else{PLcbuf[i*4+3]=0.001;PLcbuf[i*4]=PLcbuf[i*4+1]=PLcbuf[i*4+2]=0;}}
   gl.uniform3fv(LU.uPL,PLbuf);gl.uniform4fv(LU.uPLc,PLcbuf);}
 const LVm=M4.create(),LPm=M4.create(),LVP=M4.create(),IVP=M4.create();
-function drawBot(b){OP={a:1,f:0};if(b.g===undefined){const hh=hash32((b.name||'').length*131+(b.name||'x').charCodeAt(0));b.g=hh%3===0?'f':'m';b.hs=['short','band','long','pony','twin','spiky','bun'][hh%7];b.skin=['#f6d3b3','#e0ae88','#c68c5e','#9a6440'][hh%4];}drawHuman(b.x,b.y,b.z,b.yaw,{key:'b'+b.name,ply:1,recol:1,seed:hash32((b.name||'x').length*31+(b.name||'x').charCodeAt(0)),g:b.g,hs:b.hs,skin:b.skin,head:b.head,shield:b.shield,body:b.body,hair:b.hair,cape:b.hair,anim:b.anim,run:Math.hypot(b.vx,b.vz)>0.02&&b.onG,air:!b.onG,wk:b.wk,atkP:b.swing>0?1-b.swing/12:-1,step:b.anim%2,fin:false});}
+function drawBot(b){OP={a:1,f:0};if(b.g===undefined){const hh=hash32((b.name||'').length*131+(b.name||'x').charCodeAt(0));b.g=hh%3===0?'f':'m';b.hs=['short','band','long','pony','twin','spiky','bun'][hh%7];b.skin=['#f6d3b3','#e0ae88','#c68c5e','#9a6440'][hh%4];}drawHuman(b.x,b.y,b.z,b.yaw,{key:'b'+b.name,ply:1,recol:1,ag:b.g==='f'?'f':'m',seed:hash32((b.name||'x').length*31+(b.name||'x').charCodeAt(0)),g:b.g,hs:b.hs,skin:b.skin,head:b.head,shield:b.shield,body:b.body,hair:b.hair,cape:b.hair,anim:b.anim,run:Math.hypot(b.vx,b.vz)>0.02&&b.onG,air:!b.onG,wk:b.wk,atkP:b.swing>0?1-b.swing/12:-1,step:b.anim%2,fin:false});}
 function renderShadow(){const L=Z.L_dir;const cx=CAM.tx+Math.sin(CAM.yaw)*10,cz=CAM.tz+Math.cos(CAM.yaw)*10;
   M4.lookAt(LVm,L[0]*600,L[1]*600,L[2]*600,0,0,0);
   const px=LVm[0]*cx+LVm[8]*cz+LVm[12],py=LVm[1]*cx+LVm[9]*cz+LVm[13],pz=LVm[2]*cx+LVm[10]*cz+LVm[14];
@@ -1767,7 +1768,7 @@ function drawPlayer(){
   const atkP=P.atkT>0?1-P.atkT/P.atkDur:-1;
   if(P.stealthT>0&&!window.__stealthPass)return;
   const lk=playerLook();
-  drawHuman(P.x,P.y+emoteBob(P),P.z,P.yaw,{key:'P',ply:1,recol:!!(S.look&&(S.look.hair||S.look.body)),km:lk.km,em:P.em&&P.em.t>0?P.em.k:null,body:lk.body,hair:lk.hair,cape:lk.cape,head:lk.head,shield:lk.shield,skin:lk.skin,pants:lk.pants,hs:lk.hs,g:lk.g,eye:lk.eye,boot:lk.boot,neck:lk.neck,pauld:lk.pauld,seed:7,wave:emoteIs(P,'wave'),anim:P.anim,run:(Math.hypot(P.vx,P.vz)>0.03&&P.onG)||emoteIs(P,'dance'),air:!P.onG,wk:S.cur,atkP,step:P.swingStep,fin:P.fin,spinA:P.spin>0?P.spin*0.45:emoteSpin(P),sc:P.cb&&P.cb.k==='abyss'?1.3:(lk.sc||0)});
+  drawHuman(P.x,P.y+emoteBob(P),P.z,P.yaw,{key:'P',ply:1,ag:S.look&&S.look.ag,recol:!!(S.look&&(S.look.hair||S.look.body)),km:lk.km,em:P.em&&P.em.t>0?P.em.k:null,body:lk.body,hair:lk.hair,cape:lk.cape,head:lk.head,shield:lk.shield,skin:lk.skin,pants:lk.pants,hs:lk.hs,g:lk.g,eye:lk.eye,boot:lk.boot,neck:lk.neck,pauld:lk.pauld,seed:7,wave:emoteIs(P,'wave'),anim:P.anim,run:(Math.hypot(P.vx,P.vz)>0.03&&P.onG)||emoteIs(P,'dance'),air:!P.onG,wk:S.cur,atkP,step:P.swingStep,fin:P.fin,spinA:P.spin>0?P.spin*0.45:emoteSpin(P),sc:P.cb&&P.cb.k==='abyss'?1.3:(lk.sc||0)});
   OP={a:1,f:0};}
 function drawProps(){
   // fires
@@ -2446,7 +2447,7 @@ function hitT(t,d,src){if(t===PL0)return hurtP(d,src);if(t.inv>0||t.dead>0)retur
 
 // --- remote player drawing ---
 function drawRemote(b){if(b.dead||b.sh)return;OP={a:1,f:b.flash>0?0.3:0};
-  try{drawHuman(b.x,b.y+emoteBob(b),b.z,b.yaw,{key:'r'+(b.id||b.name),ply:1,recol:1,km:b.km,em:b.em&&b.em.t>0?b.em.k:null,head:b.head,shield:b.shield,body:b.body,hair:b.hair,cape:b.cape,skin:b.skin,pants:b.pants,hs:b.hs,g:b.g,eye:b.eye,boot:b.boot,neck:b.neck,pauld:b.pauld,sc:b.sc!==1?b.sc:0,wave:emoteIs(b,'wave'),anim:b.anim,run:b.run||emoteIs(b,'dance'),air:b.air,wk:b.wk,atkP:b.ap,step:b.step,fin:b.fin,spinA:b.spin||emoteSpin(b)});}catch(e){}
+  try{drawHuman(b.x,b.y+emoteBob(b),b.z,b.yaw,{key:'r'+(b.id||b.name),ply:1,recol:1,ag:b.ag,km:b.km,em:b.em&&b.em.t>0?b.em.k:null,head:b.head,shield:b.shield,body:b.body,hair:b.hair,cape:b.cape,skin:b.skin,pants:b.pants,hs:b.hs,g:b.g,eye:b.eye,boot:b.boot,neck:b.neck,pauld:b.pauld,sc:b.sc!==1?b.sc:0,wave:emoteIs(b,'wave'),anim:b.anim,run:b.run||emoteIs(b,'dance'),air:b.air,wk:b.wk,atkP:b.ap,step:b.step,fin:b.fin,spinA:b.spin||emoteSpin(b)});}catch(e){}
   OP={a:1,f:0};}
 
 // --- connection ---
@@ -2539,7 +2540,7 @@ function netStep(){
     if(!b){b={rem:1,emI:Array.isArray(q.em)?num(q.em[0],0):0,peer:p.peer,x:num(pp[0],0),y:num(pp[1],0),z:num(pp[2],0),yaw:num(pp[3],0),anim:0,vx:0,vz:0,onG:true,flash:0};NET.rem.set(p.peer,b);}
     b.name=NET.known.get(p.peer);b.tx=num(pp[0],b.x);b.ty=num(pp[1],b.y);b.tz=num(pp[2],b.z);b.tyaw=num(pp[3],b.yaw);
     b.lv=Math.round(num(q.lv,1));b.wk=WEAPONS[q.w]?q.w:'katana';
-    const lk=Array.isArray(q.lk)?q.lk:[];b.body=HEX.test(lk[0])?lk[0]:'#6d4c41';b.hair=HEX.test(lk[1])?lk[1]:'#3e2723';b.cape=HEX.test(lk[2])?lk[2]:'#2e5e2e';b.head=HEADS.includes(lk[3])?lk[3]:(lk[3]===''?null:'cap');b.shield=!!lk[4];b.skin=HEX.test(lk[5])?lk[5]:null;b.pants=HEX.test(lk[6])?lk[6]:null;b.hs=HSOK.includes(lk[7])?lk[7]:null;b.g=lk[9]==='f'?'f':'m';b.eye=HEX.test(lk[10])?lk[10]:null;b.boot=HEX.test(lk[11])?lk[11]:null;b.neck=HEX.test(lk[12])?lk[12]:null;b.pauld=HEX.test(lk[13])?lk[13]:null;b.sc=clamp(num(lk[8],1),0.9,1.1);b.km=['Knight','Barbarian','Mage','Rogue','Rogue_Hooded'].includes(lk[14])?lk[14]:null;b.pv=!!q.pv;b.pt=typeof q.pt==='string'?cleanTxt(q.pt).slice(0,8):null;if(Array.isArray(q.em)){const ei=num(q.em[0],0);if(b.emI===undefined)b.emI=ei;else if(ei>b.emI){b.emI=ei;const ek=String(q.em[1]);if(EMO[ek])b.em={k:ek,t:240};}}
+    const lk=Array.isArray(q.lk)?q.lk:[];b.body=HEX.test(lk[0])?lk[0]:'#6d4c41';b.hair=HEX.test(lk[1])?lk[1]:'#3e2723';b.cape=HEX.test(lk[2])?lk[2]:'#2e5e2e';b.head=HEADS.includes(lk[3])?lk[3]:(lk[3]===''?null:'cap');b.shield=!!lk[4];b.skin=HEX.test(lk[5])?lk[5]:null;b.pants=HEX.test(lk[6])?lk[6]:null;b.hs=HSOK.includes(lk[7])?lk[7]:null;b.g=lk[9]==='f'?'f':'m';b.eye=HEX.test(lk[10])?lk[10]:null;b.boot=HEX.test(lk[11])?lk[11]:null;b.neck=HEX.test(lk[12])?lk[12]:null;b.pauld=HEX.test(lk[13])?lk[13]:null;b.sc=clamp(num(lk[8],1),0.9,1.1);b.km=['Knight','Barbarian','Mage','Rogue','Rogue_Hooded'].includes(lk[14])?lk[14]:null;b.ag=lk[15]==='m'?'m':'f';b.pv=!!q.pv;b.pt=typeof q.pt==='string'?cleanTxt(q.pt).slice(0,8):null;if(Array.isArray(q.em)){const ei=num(q.em[0],0);if(b.emI===undefined)b.emI=ei;else if(ei>b.emI){b.emI=ei;const ek=String(q.em[1]);if(EMO[ek])b.em={k:ek,t:240};}}
     const a=Array.isArray(q.a)?q.a:[];b.ap=clamp(num(a[0],-1),-1,1);b.step=Math.round(clamp(num(a[1],0),0,8));b.fin=!!a[2];b.spin=num(a[3],0);b.run=!!a[4];b.air=!!a[5];
     const h=Array.isArray(q.hp)?q.hp:[1,1];b.hp=Math.max(0,num(h[0],1));b.mhp=Math.max(1,num(h[1],1));b.dead=!!q.d;b.sh=!!q.sh;b.hc=!!q.hc&&!q.ps;b.ps=!!q.ps;b.fresh=fresh(p);
     // interpolate
@@ -2624,7 +2625,7 @@ function netPublish(){
   const R=NET.R;if(!R)return;
   const lk=playerLook();const atkP=P.atkT>0?1-P.atkT/P.atkDur:-1;
   const o={n:NET.name,zn:S.zone,p:[r2(P.x),r2(P.y),r2(P.z),r2(P.yaw)],w:S.cur,hp:[Math.max(0,Math.ceil(P.hp)),DS.maxHp],lv:S.level,
-    lk:[lk.body,lk.hair,lk.cape,lk.head||'',lk.shield?1:0,lk.skin||'',lk.pants||'',lk.hs||'',lk.sc||1,lk.g||'m',lk.eye||'',lk.boot||'',lk.neck||'',typeof lk.pauld==='string'?lk.pauld:'',lk.km||''],a:[r2(atkP),P.swingStep|0,P.fin?1:0,r2(P.spin>0?P.spin*0.45:0),Math.hypot(P.vx,P.vz)>0.03&&P.onG?1:0,P.onG?0:1],
+    lk:[lk.body,lk.hair,lk.cape,lk.head||'',lk.shield?1:0,lk.skin||'',lk.pants||'',lk.hs||'',lk.sc||1,lk.g||'m',lk.eye||'',lk.boot||'',lk.neck||'',typeof lk.pauld==='string'?lk.pauld:'',lk.km||'',lk.ag||''],a:[r2(atkP),P.swingStep|0,P.fin?1:0,r2(P.spin>0?P.spin*0.45:0),Math.hypot(P.vx,P.vz)>0.03&&P.onG?1:0,P.onG?0:1],
     d:P.dead>0?1:0,sh:P.stealthT>0?1:0,hc:NET.claim?1:0,ps:0,f:frame%100000,ch:NET.ch,pv:S.pvp?1:0,pt:NET.pt||null,em:NET.em||null,dk:NET.dk||null,pk:NET.pvpOut&&NET.pvpOut.size?[...NET.pvpOut].map(([k,v])=>[k,Math.round(v)]):null,ms:null,ep:null,wv:null,wn:null,hd:null,ht:null};
   if(NET.host&&others()){
     const pts=[PL0,...NET.prox.values()];
@@ -3576,7 +3577,7 @@ for(const k of['magslime','firebat','ashknight','hellhound','lavagolem','wolfkin
 const sellV=g=>Math.max(1,Math.round(gearSell(g)*0.2));
 
 // ================= v7: KayKit 3D characters (CC0 · Kay Lousberg · kaylousberg.com) =================
-const KMETA={"pal":["root","hips","spine","chest","upperarm.l","lowerarm.l","wrist.l","hand.l","handslot.l","upperarm.r","lowerarm.r","wrist.r","hand.r","handslot.r","head","upperleg.l","lowerleg.l","foot.l","toes.l","upperleg.r","lowerleg.r","foot.r","toes.r"],"fps":20,"pieces":{"W_Round_Shield":[0,322,6440,852],"W_1H_Sword":[8144,359,15324,900],"W_2H_Sword":[17124,545,28024,1236],"Knight_hat":[30496,504,40576,1440],"Knight_cape":[43456,56,44576,252],"Knight":[45080,3716,119400,12444],"W_1H_Axe_Offhand":[144288,340,151088,822],"W_Barbarian_Round_Shield":[152732,314,159012,852],"W_1H_Axe":[160716,340,167516,822],"W_2H_Axe":[169160,591,180980,1524],"Barbarian_hat":[184028,529,194608,1962],"Barbarian_cape":[198532,53,199592,234],"Barbarian":[200060,3342,266900,12135],"W_Spellbook_open":[291172,418,299532,876],"W_1H_Wand":[301284,158,304444,450],"W_2H_Staff":[305344,498,315304,1320],"Mage_hat":[317944,402,325984,1188],"Mage_cape":[328360,56,329480,252],"Mage":[329984,3348,396944,12087],"W_Knife_Offhand":[421120,414,429400,1032],"W_1H_Crossbow":[431464,1356,458584,3504],"W_2H_Crossbow":[465592,1884,503272,4752],"W_Knife":[512776,414,521056,1032],"Rogue_cape":[523120,56,524240,252],"Rogue":[524744,3511,594964,12789],"Rogue_Hooded_cape":[620544,56,621664,252],"Rogue_Hooded":[622168,3196,686088,11763],"Skeleton_Warrior_hat":[709616,1069,730996,2490],"Skeleton_Warrior":[735976,4704,830056,14268],"Skeleton_Warrior_cape":[858592,344,865472,1044],"Skeleton_Minion":[867560,4514,957840,14820],"Skeleton_Minion_cape":[987480,344,994360,1044],"Skeleton_Rogue_hat":[996448,392,1004288,1470],"Skeleton_Rogue_cape":[1007228,56,1008348,252],"Skeleton_Rogue":[1008852,4811,1105072,14112],"Skeleton_Mage_hat":[1133296,340,1140096,924],"Skeleton_Mage":[1141944,3266,1207264,11574],"W_Skeleton_Mage_Skull":[1230412,450,1239412,1266],"W_Skeleton_Blade":[1241944,541,1252764,1371],"W_Skeleton_Axe":[1255508,692,1269348,1602],"W_Skeleton_Crossbow":[1272552,785,1288252,1752],"W_Skeleton_Shield_Small_A":[1291756,584,1303436,1500]},"anims":{"idle":[1306436,22,1.0667,1],"idle2":[1318580,22,1.0667,1],"run":[1330724,17,0.8,1],"jump":[1340108,22,1.0667,1],"s1":[1352252,21,1.0,0],"s2":[1363844,22,1.0667,0],"s3":[1375988,33,1.6,0],"chop":[1394204,22,1.0667,0],"g1":[1406348,23,1.1,0],"g2":[1419044,34,1.6333,0],"spin":[1437812,14,0.6667,1],"d1":[1445540,24,1.1667,0],"d2":[1458788,33,1.6,0],"shoot1":[1477004,22,1.0667,0],"shoot2":[1489148,22,1.0667,0],"cast":[1501292,20,0.9333,0],"castL":[1512332,52,2.5333,1],"hit":[1541036,14,0.6667,0],"death":[1548764,17,0.8,0],"cheer":[1558148,34,1.6667,1],"sit":[1576916,81,4.0,1],"dodge":[1621628,9,0.4,0],"use":[1626596,33,1.6,0],"swalk":[1644812,33,1.6,1],"srun":[1663028,17,0.8,1],"taunt":[1672412,22,1.0333,0],"awake":[1684556,21,1.0,0]},"ps":8.486400453096014e-05,"size":1696148};
+const KMETA={"pal":["root","hips","spine","chest","upperarm.l","lowerarm.l","wrist.l","hand.l","handslot.l","upperarm.r","lowerarm.r","wrist.r","hand.r","handslot.r","head","upperleg.l","lowerleg.l","foot.l","toes.l","upperleg.r","lowerleg.r","foot.r","toes.r"],"fps":20,"pieces":{"W_Round_Shield":[0,322,6440,852],"W_1H_Sword":[8144,359,15324,900],"W_2H_Sword":[17124,545,28024,1236],"Knight_hat":[30496,504,40576,1440],"Knight_cape":[43456,56,44576,252],"Knight":[45080,3716,119400,12444],"W_1H_Axe_Offhand":[144288,340,151088,822],"W_Barbarian_Round_Shield":[152732,314,159012,852],"W_1H_Axe":[160716,340,167516,822],"W_2H_Axe":[169160,591,180980,1524],"Barbarian_hat":[184028,529,194608,1962],"Barbarian_cape":[198532,53,199592,234],"Barbarian":[200060,3342,266900,12135],"W_Spellbook_open":[291172,418,299532,876],"W_1H_Wand":[301284,158,304444,450],"W_2H_Staff":[305344,498,315304,1320],"Mage_hat":[317944,402,325984,1188],"Mage_cape":[328360,56,329480,252],"Mage":[329984,3348,396944,12087],"W_Knife_Offhand":[421120,414,429400,1032],"W_1H_Crossbow":[431464,1356,458584,3504],"W_2H_Crossbow":[465592,1884,503272,4752],"W_Knife":[512776,414,521056,1032],"Rogue_cape":[523120,56,524240,252],"Rogue":[524744,3511,594964,12789],"Rogue_Hooded_cape":[620544,56,621664,252],"Rogue_Hooded":[622168,3196,686088,11763],"Skeleton_Warrior_hat":[709616,1069,730996,2490],"Skeleton_Warrior":[735976,4704,830056,14268],"Skeleton_Warrior_cape":[858592,344,865472,1044],"Skeleton_Minion":[867560,4514,957840,14820],"Skeleton_Minion_cape":[987480,344,994360,1044],"Skeleton_Rogue_hat":[996448,392,1004288,1470],"Skeleton_Rogue_cape":[1007228,56,1008348,252],"Skeleton_Rogue":[1008852,4811,1105072,14112],"Skeleton_Mage_hat":[1133296,340,1140096,924],"Skeleton_Mage":[1141944,3266,1207264,11574],"W_Skeleton_Mage_Skull":[1230412,450,1239412,1266],"W_Skeleton_Blade":[1241944,541,1252764,1371],"W_Skeleton_Axe":[1255508,692,1269348,1602],"W_Skeleton_Crossbow":[1272552,785,1288252,1752],"W_Skeleton_Shield_Small_A":[1291756,584,1303436,1500],"Hero_M":[4533188,31932,5171828,190374],"Wolf":[5552576,52476,6602096,312684],"Wolf_lo":[7227464,15328,7534024,90780],"Wolf_g":[7715584,15068,8016944,90156],"Slime":[8197256,8364,8364536,50172],"Slime_lo":[8464880,2626,8517400,15744],"Slime_g":[8548888,1310,8575088,7824],"Mush":[8590736,13216,8855056,79296],"Mush_lo":[9013648,4431,9102268,26574],"Mush_g":[9155416,176,9158936,1032],"Bat":[9161000,18212,9525240,109224],"Bat_lo":[9743688,6097,9865628,36510],"Bat_g":[9938648,162,9941888,948],"Golem":[9943784,26035,10464484,156198],"Golem_lo":[10776880,7808,10933040,46836],"Golem_g":[11026712,5899,11144692,35214],"Skel":[11215120,15853,11532180,95142],"Skel_lo":[11722464,5172,11825904,30888],"Skel_g":[11887680,342,11894520,2028],"Treant":[11898576,45211,12802796,271242],"Treant_g":[13345280,1332,13371920,7896],"Demon":[13387712,55368,14495072,332484],"Demon_g":[15160040,5326,15266560,31812],"SkHelm":[15330184,10976,15549704,65784],"SkHelm_lo":[15681272,2733,15735932,16338],"SkHood":[15768608,14921,16067028,89454],"SkHood_lo":[16245936,4148,16328896,25176],"SkKnight":[16379248,29584,16970928,177396],"SkKnight_lo":[17325720,8286,17491440,49740]},"anims":{"idle":[1306436,22,1.0667,1],"idle2":[1318580,22,1.0667,1],"run":[1330724,17,0.8,1],"jump":[1340108,22,1.0667,1],"s1":[1352252,21,1.0,0],"s2":[1363844,22,1.0667,0],"s3":[1375988,33,1.6,0],"chop":[1394204,22,1.0667,0],"g1":[1406348,23,1.1,0],"g2":[1419044,34,1.6333,0],"spin":[1437812,14,0.6667,1],"d1":[1445540,24,1.1667,0],"d2":[1458788,33,1.6,0],"shoot1":[1477004,22,1.0667,0],"shoot2":[1489148,22,1.0667,0],"cast":[1501292,20,0.9333,0],"castL":[1512332,52,2.5333,1],"hit":[1541036,14,0.6667,0],"death":[1548764,17,0.8,0],"cheer":[1558148,34,1.6667,1],"sit":[1576916,81,4.0,1],"dodge":[1621628,9,0.4,0],"use":[1626596,33,1.6,0],"swalk":[1644812,33,1.6,1],"srun":[1663028,17,0.8,1],"taunt":[1672412,22,1.0333,0],"awake":[1684556,21,1.0,0],"w_idle":[17590920,41,2.0,1],"w_run":[17613552,13,0.62,1],"w_bite":[17620728,13,0.6,0],"w_crouch":[17627904,21,1.0,1],"w_leap":[17639496,11,0.5,1],"w_howl":[17645568,45,2.2,0],"w_death":[17670408,21,1.0,0],"s_idle":[17682000,25,1.2,1],"s_air":[17695800,13,0.6,1],"s_land":[17702976,8,0.35,0],"s_death":[17707392,13,0.6,0],"m_idle":[17714568,33,1.6,1],"m_walk":[17732784,17,0.8,1],"m_cast":[17742168,13,0.6,0],"m_death":[17749344,17,0.8,0],"b_fly":[17758728,9,0.42,1],"b_dive":[17763696,11,0.5,0],"b_death":[17769768,15,0.7,0],"g_idle":[17778048,49,2.4,1],"g_walk":[17805096,27,1.3,1],"g_punch":[17820000,11,0.5,0],"g_slam":[17826072,15,0.7,0],"g_death":[17834352,21,1.0,0],"t_idle":[17845944,61,3.0,1],"t_walk":[17879616,37,1.8,1],"t_stomp":[17900040,12,0.57,0],"t_cast":[17906664,19,0.9,0],"t_death":[17917152,29,1.4,0],"d_idle":[17933160,41,2.0,1],"d_move":[17955792,21,1.0,1],"d_cast":[17967384,13,0.6,0],"d_wind":[17974560,14,0.67,0],"d_charge":[17982288,11,0.5,1],"d_death":[17988360,25,1.2,0]},"ps":8.486400453096014e-05,"size":1696148,"heroBase":4533188};
 const KMODELS=['Knight','Barbarian','Mage','Rogue','Rogue_Hooded'];
 const KMN={Knight:'อัศวิน',Barbarian:'นักรบเถื่อน',Mage:'จอมเวท',Rogue:'นักล่าสาว',Rogue_Hooded:'นักฆ่าฮู้ด'};
 const KCLS={sword:'Knight',knight:'Knight',archer:'Rogue',assassin:'Rogue_Hooded',rogue:'Rogue_Hooded',gunner:'Barbarian',cleric:'Mage',moon:'Mage',abyss:'Knight',shadow:'Rogue_Hooded'};
@@ -3645,7 +3646,7 @@ function kayDraw(list){const sh=SHMODE;
     gl.disableVertexAttribArray(A.aJ);gl.disableVertexAttribArray(A.aW);if(A.aP!==SHA.aP)gl.disableVertexAttribArray(A.aP);gl.useProgram(SHP);gl.enableVertexAttribArray(SHA.aP);return;}
   const p=KAY.P,A=KAY.A,U=KAY.U;gl.useProgram(p);if(KAY.stamp!==window.__RFC){KAY.stamp=window.__RFC;kayFrameU();}
   for(const n of['aP','aN','aC','aJ','aW'])if(A[n]>=0)gl.enableVertexAttribArray(A[n]);
-  gl.uniformMatrix4fv(U.uM,false,STK[SP]);gl.uniform4fv(U.uB,KAY.B);gl.uniform1f(U.uSpec,0.18);gl.uniform1f(U.uRim,0.45);
+  gl.uniformMatrix4fv(U.uM,false,STK[SP]);gl.uniform4fv(U.uB,KAY.B);gl.uniform1f(U.uSpec,KAY.sp!==undefined?KAY.sp:0.18);gl.uniform1f(U.uRim,KAY.rm!==undefined?KAY.rm:0.45);
   for(const[k,col,em]of list){const pc=KAY.pieces[k];if(!pc)continue;const c=col||W1;gl.uniform4f(U.uTint,c[0],c[1],c[2],OP.a);gl.uniform1f(U.uEmis,em||0);gl.uniform1f(U.uFlash,OP.f||0);
     gl.bindBuffer(gl.ARRAY_BUFFER,pc.vb);gl.vertexAttribPointer(A.aP,3,gl.SHORT,false,20,0);gl.vertexAttribPointer(A.aN,3,gl.BYTE,true,20,6);gl.vertexAttribPointer(A.aC,3,gl.UNSIGNED_BYTE,true,20,9);
     gl.vertexAttribPointer(A.aJ,4,gl.UNSIGNED_BYTE,false,20,12);gl.vertexAttribPointer(A.aW,4,gl.UNSIGNED_BYTE,true,20,16);
@@ -3673,20 +3674,22 @@ const _drawHuman7=drawHuman;drawHuman=function(x,y,z,yaw,o){if(kayHuman(x,y,z,ya
 const KMON={skeleton:['Skeleton_Warrior',['W_Skeleton_Blade','W_Skeleton_Shield_Small_A'],'s1'],archer:['Skeleton_Rogue',['W_Skeleton_Crossbow'],'shoot2'],
   ashknight:['Skeleton_Warrior',['W_Skeleton_Axe'],'chop'],boneknight:['Skeleton_Warrior',['W_Skeleton_Blade','W_Skeleton_Shield_Small_A'],'g1']};
 function kayMon(m){if(!KAY.ok||S.kay===0)return false;const K=KMON[m.t]||(m.d.draw==='skeleton'?KMON.skeleton:null);if(!K)return false;
-  const tm=frame/60;let an=Math.hypot(m.vx,m.vz)>0.01?'swalk':'idle2',t=tm+(m.id%13)*0.3;
+  const tm=frame/60;let an=Math.hypot(m.vx,m.vz)>0.01?'run':'idle',t=tm+(m.id%13)*0.3;
   if(m.dead){an='death';t=(1-m.deadT/26)*KAY.anims.death.dur;}
   else if(m.state==='atk'){an=K[2];t=clamp(1-m.st/26,0,1)*KAY.anims[an].dur*0.7+0.1;}
-  else if(an==='swalk')t=m.anim/60*1.2;
-  kayPose('m'+m.id,an,t,tm);
-  const fl=m.flash>0?0.7:0;const tint=C(m.d.col);const list=[[K[0],tint]];
-  if(KAY.pieces[K[0]+'_hat'])list.push([K[0]+'_hat',tint]);if(KAY.pieces[K[0]+'_cape'])list.push([K[0]+'_cape',C(m.t==='boneknight'?'#4a148c':m.t==='ashknight'?'#bf360c':'#5d4037')]);
+  else if(an==='run')t=m.anim/60*0.75;
+  if(window.__MA){an=__MA.an;t=__MA.t;}kayPose('m'+m.id,an,t,tm);
+  const fl=m.flash>0?0.7:0;let tint=C(m.d.col);let list=[[K[0],tint]];const NS=KAY.pieces.Skel&&S.kay!==0;
+  if(NS){const far=Math.hypot(m.x-CAM.x,m.z-CAM.z)>14||SHMODE,lo=far?'_lo':'';const SV={skeleton:['SkHelm',[1,1,1],[1,1,1],[0.45,1,0.1]],archer:['SkHood',[1,1,1],[1,1,1],[1,0.3,0.3]],ashknight:['SkKnight',[0.72,0.66,0.6],[0.9,0.55,0.35],[1,0.55,0.1]],boneknight:['SkKnight',[0.92,0.9,0.96],[0.6,0.55,0.8],[0.88,0.3,1]]}[m.t]||['SkHelm',[1,1,1],[1,1,1],[0.45,1,0.1]];
+    list=[['Skel'+lo,SV[1]],[SV[0]+lo,SV[2]]];if(!SHMODE)list.push(['Skel_g',SV[3],1]);if(m.t==='boneknight'&&KAY.pieces[K[0]+'_cape'])list.push([K[0]+'_cape',C('#4a148c')]);KAY.sp=0.1;KAY.rm=0.2;}
+  else{if(KAY.pieces[K[0]+'_hat'])list.push([K[0]+'_hat',tint]);if(KAY.pieces[K[0]+'_cape'])list.push([K[0]+'_cape',C(m.t==='boneknight'?'#4a148c':m.t==='ashknight'?'#bf360c':'#5d4037')]);}
   for(const w of K[1])list.push([w,m.t==='boneknight'?C('#b39ddb'):W1]);
-  const op=OP;OP={a:1,f:fl};push();SCL(KAY.SC*1.05);kayDraw(list);pop();OP=op;
-  if(!SHMODE&&!m.dead){const ec=m.t==='archer'?'#ff5252':m.t==='boneknight'?'#e040fb':'#76ff03';const s=KAY.SC*1.05;sp(0.1*s,2.02*s,0.2*s,0.045,0.04,0.02,ec,1);sp(-0.1*s,2.02*s,0.2*s,0.045,0.04,0.02,ec,1);}
+  const op=OP;OP={a:1,f:fl};push();SCL(KAY.SC*1.05);kayDraw(list);pop();OP=op;KAY.sp=KAY.rm=undefined;
+  if(!SHMODE&&!m.dead&&!NS){const ec=m.t==='archer'?'#ff5252':m.t==='boneknight'?'#e040fb':'#76ff03';const s=KAY.SC*1.05;sp(0.1*s,2.02*s,0.2*s,0.045,0.04,0.02,ec,1);sp(-0.1*s,2.02*s,0.2*s,0.045,0.04,0.02,ec,1);}
   return true;}
 
 const NPC_KM={"lyra": "Rogue", "jojo": "Barbarian", "tongdee": "Barbarian", "khaopun": "Rogue_Hooded", "buakhao": "Mage", "sompong": "Knight", "king": "Rogue_Hooded", "roland": "Knight", "elvira": "Rogue", "benedict": "Mage", "silas": "Rogue_Hooded", "mila": "Mage", "daeng": "Barbarian", "ruesi": "Mage", "nid": "Rogue", "gearsmith": "Knight", "pearl": "Rogue", "chok": "Barbarian", "mong": "Barbarian", "jaidee": "Mage", "warp0": "Mage", "warp1": "Mage", "warp2": "Mage", "flamia": "Knight", "emberpriest": "Mage", "lavashop": "Barbarian", "mk_shadow": "Rogue_Hooded", "mk_luna": "Rogue", "mk_ronin": "Barbarian", "darin": "Knight", "arun": "Mage", "brom": "Barbarian", "gareth": "Knight", "kara": "Rogue_Hooded", "boris": "Barbarian", "abyssghost": "Knight", "nameless": "Rogue_Hooded", "moonsage": "Mage", "starhermit": "Mage"};
-const _pl7=playerLook;playerLook=function(){const b=_pl7();const L=S.look||{};b.km=(L.km&&L.km!=='auto')?L.km:(KCLS[S.cls.cur]||b.km||'Knight');return b;};
+const _pl7=playerLook;playerLook=function(){const b=_pl7();const L=S.look||{};b.ag=L.ag==='m'?'m':'f';b.km=(L.km&&L.km!=='auto')?L.km:(KCLS[S.cls.cur]||b.km||'Knight');return b;};
 LOOKOPT.km=[['auto','ตามอาชีพ']].concat(KMODELS.map(k=>[k,KMN[k]]));
 const _lookRender7=lookRender;lookRender=function(){_lookRender7();if(!KAY.ok||S.kay===0)return;const box=$('lookBody');
   if(styleReal()&&KA.ok){[...box.querySelectorAll('.lkG')].forEach(g=>{const t=g.querySelector('.lkT');if(t&&!/สีผม|สีเสื้อ|^รูปร่าง$/.test(t.textContent))g.remove();});const n=document.createElement('div');n.className='lkT';n.style.margin='6px 0';n.textContent='✨ สไตล์สมจริงอนิเมะ — เปลี่ยนสีผมและสีชุดได้ (เปลี่ยนสไตล์ภาพได้ที่ ตั้งค่า)';box.insertBefore(n,box.firstChild);return;}
@@ -3804,7 +3807,8 @@ function kaHuman(x,y,z,yaw,o){if(!kaUse(o))return false;const far=Math.hypot(x-C
   else if(o.spinA&&wk==='greatsword'&&!em)an='spin';else if(o.air)an='jump';else if(em)an=em;else if(o.wave)an='cheer';else if(o.run){an='run';t=(o.anim||0)/60*1.05;}else if(wk==='greatsword')an='idle2';
   if(!isFinite(t))t=0;kaPose(o.key,an,t,tm);
   push();T(x,y,z);RY(yaw);const sc=KA.SC*(o.sc||1);SCL(sc,sc,sc);
-  if(SHMODE){if(OP.a>0.99)kaShadow();}else kaDrawBody(o);
+  if(o.ag==='m'&&S.heroM&&KAY.pieces.Hero_M){KAY.B.set(KA.B.subarray(0,KAY.B.length));kayDraw([['Hero_M']]);}
+  else if(SHMODE){if(OP.a>0.99)kaShadow();}else kaDrawBody(o);
   if(wk&&KWPN[wk]&&KAY.ok){KAY.B.set(KA.B.subarray(0,KAY.B.length));kayDraw(KWPN[wk].map(w=>[w]));}
   pop();return true;}
 const _drawHuman8=drawHuman;drawHuman=function(x,y,z,yaw,o){o.lod=Math.hypot(x-CAM.x,z-CAM.z)>14;if(kaHuman(x,y,z,yaw,o))return;_drawHuman8(x,y,z,yaw,o);};
@@ -3848,6 +3852,55 @@ function ensureS(){if(!S.eq||typeof S.eq!=='object')S.eq={};if(!Array.isArray(S.
   if(S.camZ===undefined)S.camZ=1;if(S.camAF===undefined)S.camAF=1;if(!S.camV4){S.camV4=1;S.cam='ots';}if(!S.cam)S.cam='ots';if(S.style===undefined)S.style='real';if(!S.uid)S.uid=rid(12);if(!S.ck)S.ck=rid(16);}
 ensureS();
 const _rc9=recalc;recalc=function(){ensureS();_rc9();};
+
+function kayWolf(m){if(!KAY.ok||S.kay===0||!KAY.pieces.Wolf||!KAY.anims.w_run)return false;const tm=frame/60,sp=Math.hypot(m.vx,m.vz);let an='w_idle',t=tm+(m.id%7)*0.4;
+  if(m.dead){an='w_death';t=clamp(1-m.deadT/26,0,1)*KAY.anims.w_death.dur;}
+  else if(m.state==='wind')an='w_crouch';else if(m.state==='lunge')an='w_leap';
+  else if(m.state==='atk'){an='w_bite';t=clamp(1-m.st/20,0,1)*KAY.anims.w_bite.dur;}
+  else if(sp>0.01){an='w_run';t=(m.anim||frame)/60*(0.55+sp*5);}
+  else{const h=(tm+m.id*3.7)%15;if(h<2.2){an='w_howl';t=h;}}
+  if(window.__MA&&__MA.an.startsWith('w_')){an=__MA.an;t=__MA.t;}kayPose('m'+m.id,an,t,tm);const far=Math.hypot(m.x-CAM.x,m.z-CAM.z);const pc=(far>14||SHMODE)?'Wolf_lo':'Wolf';
+  const c=C(m.d.col),k=m.t==='wolf'?0:0.45,tint=[(1-k+c[0]*k*1.3)*0.6,(1-k+c[1]*k*1.3)*0.59,(1-k+c[2]*k*1.3)*0.57];const op=OP;OP={a:op&&op.a!==undefined?op.a:1,f:m.flash>0?0.7:0};
+  KAY.sp=0.03;KAY.rm=0.16;push();SCL(0.86,0.86,0.86);const WL=[[pc,tint]];if(!SHMODE&&(m.t==='hellhound'||m.t==='wolfking')&&KAY.pieces.Wolf_g)WL.push(['Wolf_g',m.t==='hellhound'?[1,0.5,0.12]:[0.55,0.85,1.0],1]);kayDraw(WL);pop();OP=op;KAY.sp=KAY.rm=undefined;
+  return true;}
+function sp_(s){sp(s*0.043,0.03,0.08,0.02,0.015,0.01,'#ff5722',1);}
+
+// ===== v9 sculpted creatures =====
+const KCV={slime:{tint:null,em:0},gslime:{em:0.15},magslime:{em:0.35},
+  bat:{tint:[0.95,0.82,1.0]},firebat:{tint:[1.25,0.7,0.5],gl:[1,0.6,0.2]},
+  golem:{tint:[1,1,1],gl:[0.35,0.9,1.0]},lavagolem:{tint:[0.62,0.45,0.4],gl:[1,0.45,0.08]},magmagiant:{tint:[0.55,0.4,0.36],gl:[1,0.5,0.1]},warlord:{tint:[0.62,0.52,0.75],gl:[0.9,0.3,1.0]},
+  demon:{tint:[1,1,1],gl:[1,0.45,0.12]},infernus:{tint:[1.4,0.78,0.36],gl:[1,0.85,0.35],em:0.12}};
+const KC={slime:{p:'Slime',sc:0.95,an:{idle:'s_idle',air:'s_air',land:'s_land',death:'s_death'}},
+  mushroom:{p:'Mush',sc:1.0,an:{idle:'m_idle',walk:'m_walk',cast:'m_cast',death:'m_death'}},
+  bat:{p:'Bat',sc:1.05,an:{idle:'b_fly',walk:'b_fly',atk:'b_dive',death:'b_death'}},
+  golem:{p:'Golem',sc:1.2,an:{idle:'g_idle',walk:'g_walk',atk:'g_punch',slam:'g_slam',death:'g_death'}},
+  treant:{p:'Treant',sc:2.08,an:{idle:'t_idle',walk:'t_walk',stomp:'t_stomp',cast:'t_cast',death:'t_death'}},
+  demon:{p:'Demon',sc:1.72,an:{idle:'d_idle',walk:'d_move',cast:'d_cast',wind:'d_wind',charge:'d_charge',death:'d_death'}}};
+function kcOn(m){if(!KAY.ok||S.kay===0)return null;const k=KC[m.d.draw||m.t];return k&&KAY.pieces[k.p]&&KAY.anims[k.an.idle]?k:null;}
+function kayC(m,k){const tm=frame/60,A=k.an,dur=n=>KAY.anims[n]?KAY.anims[n].dur:1,sp=Math.hypot(m.vx,m.vz);let an=A.idle,t=tm+(m.id%9)*0.37;
+  if(m.cd>(m._pcd||0)+20)m._ct=frame;m._pcd=m.cd;
+  if(m.dead){an=A.death;t=clamp(1-m.deadT/26,0,1)*dur(an);}
+  else if(A.slam&&m.state==='slam'){an=A.slam;t=clamp(1-m.st/42,0,1)*dur(an);}
+  else if(A.stomp&&m.state==='stomp'){an=A.stomp;t=clamp(1-m.st/34,0,1)*dur(an);}
+  else if(A.wind&&m.state==='wind'){an=A.wind;t=clamp(1-m.st/40,0,1)*dur(an);}
+  else if(A.charge&&m.state==='charge'){an=A.charge;}
+  else if(A.atk&&m.state==='atk'){an=A.atk;t=clamp(1-m.st/30,0,1)*dur(an);}
+  else if(A.air&&!m.onG){an=A.air;m._lg=frame;}
+  else if(A.land&&m._lg&&frame-m._lg<21){an=A.land;t=(frame-m._lg)/60;}
+  else if(A.cast&&m.d.ai==='spore'&&m.st>0){an=A.cast;t=clamp(1-m.st/20,0,1)*dur(an);}
+  else if(A.cast&&m._ct&&frame-m._ct<dur(A.cast)*60){an=A.cast;t=(frame-m._ct)/60;}
+  else if(A.atk&&m.d.ai==='fly'&&!m.dead&&hd(m,P)<2.4){an=A.atk;t=tm;}
+  else if(sp>0.006&&A.walk){an=A.walk;t=(m.anim||frame)/60*(0.6+sp*8);}
+  if(window.__MA){an=__MA.an;t=__MA.t;}
+  kayPose('m'+m.id,an,t,tm);
+  const V=KCV[m.t]||{},far=Math.hypot(m.x-CAM.x,m.z-CAM.z)>14||SHMODE;const pc=far&&KAY.pieces[k.p+'_lo']?k.p+'_lo':k.p;
+  let tint=V.tint||[1,1,1];if(k.p==='Slime'){const c=C(m.d.col);tint=[c[0]*1.05,c[1]*1.05,c[2]*1.05];}
+  const gl=V.gl||[1,1,1];let gc=gl;if(m.t==='treant')gc=m.phase===2?[1,0.3,0.3]:[0.7,1,0.4];
+  const op=OP;OP={a:op&&op.a!==undefined?op.a:1,f:m.flash>0?0.7:0};KAY.sp=k.p==='Slime'?0.9:0.06;KAY.rm=k.p==='Slime'?0.35:0.14;
+  push();SCL(k.sc,k.sc,k.sc);const L=[[pc,tint,V.em||0]];if(KAY.pieces[k.p+'_g']&&!SHMODE)L.push([k.p+'_g',gc,k.p==='Slime'?0:1]);kayDraw(L);pop();
+  OP=op;KAY.sp=KAY.rm=undefined;
+  if(!SHMODE&&!m.dead&&k.p==='Demon'&&frame%3===0)part(m.x+rand(-1,1),m.y+rand(0.5,4),m.z+rand(-1,1),m.t==='infernus'?'#ffab00':'#ff3d00',1,0.02,30,0.4,-0.003);
+  return true;}
 // ================= Start / loop =================
 let glOK=false;
 if(!S.gfx)S.gfx=matchMedia('(pointer:coarse)').matches?'med':'high';window.__dprCap=(GFX[S.gfx]||GFX.med).dpr;resize();
