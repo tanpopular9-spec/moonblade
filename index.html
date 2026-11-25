@@ -392,7 +392,7 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
 </div>
 
 <script>
-const BUILD='v11';
+const BUILD='v11.1';
 (function(){try{fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/const BUILD='([^']+)'/);
   if(m&&m[1]!==BUILD&&sessionStorage.getItem('mbUpd')!==m[1]){sessionStorage.setItem('mbUpd',m[1]);location.replace(location.pathname+'?v='+m[1]);}}).catch(()=>{});}catch(e){}})();
 </script>
@@ -4114,7 +4114,9 @@ function accGet(){try{const a=JSON.parse(localStorage.getItem(ACC_K)||'null');re
 async function accDB(){let t=0;while(!(window.firebase&&firebase.database)&&t<160){if(t===30&&typeof fbLoadScripts==='function')try{fbLoadScripts();}catch(e){}await new Promise(r=>setTimeout(r,150));t++;}
   if(!(window.firebase&&firebase.database))throw new Error('เชื่อมต่ออินเทอร์เน็ตไม่ได้');if(!window._accApp)window._accApp=firebase.initializeApp(FB_CONFIG,'acct');return firebase.database(window._accApp);}
 const _te=new TextEncoder(),_hx=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
-async function accKey(n){return _hx(await crypto.subtle.digest('SHA-256',_te.encode('mb-acc:'+n.trim().toLowerCase()))).slice(0,28);}
+async function accKey(n){return _hx(await crypto.subtle.digest('SHA-256',_te.encode('mb-acc:'+n.trim().toLowerCase()))).slice(0,16);}
+const accPack=(n,o)=>({d:JSON.stringify(Object.assign({acc:1},o)),t:firebase.database.ServerValue.TIMESTAMP,n,lv:0});
+const accUnpack=v=>{if(!v||typeof v.d!=='string')return null;try{const o=JSON.parse(v.d);return o&&o.acc?Object.assign({n:v.n},o):'save';}catch(e){return null;}};
 async function accHash(pw,salt){const k=await crypto.subtle.importKey('raw',_te.encode(pw),'PBKDF2',false,['deriveBits']);return _hx(await crypto.subtle.deriveBits({name:'PBKDF2',salt:_te.encode('mb:'+salt),iterations:60000,hash:'SHA-256'},k,256));}
 function accSet(a){localStorage.setItem(ACC_K,JSON.stringify(a));try{localStorage.setItem('mb_net_name',a.n);}catch(e){}NET.name=a.n;}
 function accUI(mode){let el=$('accGate');if(!el){el=document.createElement('div');el.id='accGate';document.body.appendChild(el);}
@@ -4132,14 +4134,15 @@ function accUI(mode){let el=$('accGate');if(!el){el=document.createElement('div'
   go.onclick=async()=>{const n=cleanTxt($('agN').value).trim().slice(0,16),pw=$('agP').value,p2=$('agP2')?$('agP2').value:pw;
     if(n.length<2)return msg('ชื่อผู้เล่นต้องมีอย่างน้อย 2 ตัวอักษร');if(pw.length<4)return msg('รหัสผ่านต้องมีอย่างน้อย 4 ตัว');if(pw!==p2)return msg('รหัสผ่านทั้งสองช่องไม่ตรงกัน');
     go.disabled=true;msg('กำลังเชื่อมต่อ...');
-    try{const db=await accDB(),key=await accKey(n),ref=db.ref('accounts/'+key);const snap=await ref.once('value'),A=snap.val();
+    try{const db=await accDB(),key=await accKey(n),ref=db.ref('saves/'+key);const snap=await ref.once('value'),A0=snap.val(),A=accUnpack(A0);
+      if(A==='save'){go.disabled=false;return msg('ชื่อนี้ใช้ไม่ได้ ลองชื่ออื่น');}
       if(mode==='reg'){if(A){go.disabled=false;return msg('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น');}
-        const salt=rid(12),h=await accHash(pw,salt);const r=await ref.transaction(c=>c?undefined:{n,s:salt,h,ck:S.ck,t:Date.now()});
+        const salt=rid(12),h=await accHash(pw,salt);const r=await ref.transaction(c=>c?undefined:accPack(n,{s:salt,h,ck:S.ck}));
         if(!r.committed){go.disabled=false;return msg('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น');}
         S.acc=key;save();try{await cloudSave(true);}catch(e){}accSet({k:key,n,ck:S.ck});el.classList.add('hidden');accTitle();toast('✅ สมัครบัญชีสำเร็จ ยินดีต้อนรับ '+n);return;}
       if(!A){go.disabled=false;return msg('ไม่พบชื่อผู้เล่นนี้');}
       if(mode==='forgot'){const code=String($('agC').value||'').toLowerCase().replace(/[^a-z0-9]/g,'');if(code!==A.ck){go.disabled=false;return msg('รหัสตัวละครไม่ถูกต้อง');}
-        const salt=rid(12),h=await accHash(pw,salt);await ref.update({s:salt,h});msg('');go.disabled=false;accUI('login');$('agMsg').textContent='ตั้งรหัสผ่านใหม่แล้ว เข้าสู่ระบบได้เลย';$('agN').value=n;return;}
+        const salt=rid(12),h=await accHash(pw,salt);await ref.set(accPack(A.n||n,{s:salt,h,ck:A.ck}));msg('');go.disabled=false;accUI('login');$('agMsg').textContent='ตั้งรหัสผ่านใหม่แล้ว เข้าสู่ระบบได้เลย';$('agN').value=n;return;}
       if(await accHash(pw,A.s)!==A.h){go.disabled=false;return msg('รหัสผ่านไม่ถูกต้อง');}
       accSet({k:key,n:A.n||n,ck:A.ck});
       if(S.ck===A.ck){S.acc=key;save();el.classList.add('hidden');accTitle();toast('ยินดีต้อนรับกลับ '+(A.n||n));return;}
