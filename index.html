@@ -392,7 +392,7 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
 </div>
 
 <script>
-const BUILD='v11.1';
+const BUILD='v11.2';
 (function(){try{fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/const BUILD='([^']+)'/);
   if(m&&m[1]!==BUILD&&sessionStorage.getItem('mbUpd')!==m[1]){sessionStorage.setItem('mbUpd',m[1]);location.replace(location.pathname+'?v='+m[1]);}}).catch(()=>{});}catch(e){}})();
 </script>
@@ -4144,6 +4144,7 @@ function accUI(mode){let el=$('accGate');if(!el){el=document.createElement('div'
       if(mode==='forgot'){const code=String($('agC').value||'').toLowerCase().replace(/[^a-z0-9]/g,'');if(code!==A.ck){go.disabled=false;return msg('รหัสตัวละครไม่ถูกต้อง');}
         const salt=rid(12),h=await accHash(pw,salt);await ref.set(accPack(A.n||n,{s:salt,h,ck:A.ck}));msg('');go.disabled=false;accUI('login');$('agMsg').textContent='ตั้งรหัสผ่านใหม่แล้ว เข้าสู่ระบบได้เลย';$('agN').value=n;return;}
       if(await accHash(pw,A.s)!==A.h){go.disabled=false;return msg('รหัสผ่านไม่ถูกต้อง');}
+      {const lr=await lockRef(key);const lv=(await lr.once('value')).val();if(lockBusy(lv)){go.disabled=false;return msg('บัญชีนี้กำลังมีคนเล่นอยู่ ล็อกอินได้เมื่ออีกเครื่องออกจากเกม');}}
       accSet({k:key,n:A.n||n,ck:A.ck});
       if(S.ck===A.ck){S.acc=key;save();el.classList.add('hidden');accTitle();toast('ยินดีต้อนรับกลับ '+(A.n||n));return;}
       msg('กำลังโหลดตัวละคร...');const sv=(await db.ref('saves/'+A.ck).once('value')).val();
@@ -4152,8 +4153,25 @@ function accUI(mode){let el=$('accGate');if(!el){el=document.createElement('div'
       location.reload();}
     catch(e){go.disabled=false;msg('เกิดข้อผิดพลาด: '+(e&&e.message||e)+(String(e).includes('PERMISSION')?' (ฐานข้อมูลไม่อนุญาต)':''));}};
   el.querySelectorAll('input').forEach(i=>i.addEventListener('keydown',ev=>{if(ev.key==='Enter')go.click();}));}
+
+// --- one device at a time per account ---
+const SID=rid(10),LOCK_TTL=45000,LOCK={ref:null,iv:0,off:0,ok:false,on:0};
+async function lockRef(accK){const db=await accDB();if(!LOCK.on){LOCK.on=1;try{db.ref('.info/serverTimeOffset').on('value',x=>{LOCK.off=x.val()||0;});}catch(e){}}
+  return db.ref('saves/'+_hx(await crypto.subtle.digest('SHA-256',_te.encode('mb-lock:'+accK))).slice(0,16));}
+const lockNow=()=>Date.now()+(LOCK.off||0);
+function lockParse(v){if(!v||typeof v.d!=='string')return null;try{const o=JSON.parse(v.d);return o&&o.lock?o:null;}catch(e){return null;}}
+const lockBusy=v=>{const o=lockParse(v);return !!(o&&o.sid!==SID&&lockNow()-num(o.ts,0)<LOCK_TTL);};
+const lockPack=n=>({d:JSON.stringify({lock:1,sid:SID,ts:lockNow()}),t:firebase.database.ServerValue.TIMESTAMP,n,lv:0});
+async function lockClaim(){const a=accGet();if(!a)return true;const ref=await lockRef(a.k);LOCK.ref=ref;
+  const r=await ref.transaction(c=>lockBusy(c)?undefined:lockPack(a.n));if(!r.committed)return false;
+  try{ref.onDisconnect().remove();}catch(e){}clearInterval(LOCK.iv);
+  LOCK.iv=setInterval(async()=>{try{const q=await ref.transaction(c=>lockBusy(c)?undefined:lockPack(a.n));if(!q.committed)lockKicked();}catch(e){}},15000);LOCK.ok=true;return true;}
+function lockKicked(){clearInterval(LOCK.iv);LOCK.ok=false;window.__kicked=1;try{bigAlert('⚠️','บัญชีนี้ถูกเข้าเล่นจากเครื่องอื่น','กำลังกลับไปหน้าแรก...','#ff8a80',4000);}catch(e){}setTimeout(()=>location.reload(),3500);}
+async function lockRelease(){clearInterval(LOCK.iv);if(LOCK.ref&&LOCK.ok){try{await LOCK.ref.remove();}catch(e){}}LOCK.ok=false;}
+{const _cs=cloudSave;cloudSave=function(f){if(window.__kicked)return Promise.resolve(false);return _cs(f);};}
+
 function accLogout(){askBox('ออกจากระบบ?','ตัวละครจะถูกเก็บไว้บนเซิร์ฟเวอร์ เข้าสู่ระบบใหม่เมื่อไหร่ก็เล่นต่อได้',async()=>{try{await cloudSave(true);}catch(e){}
-  localStorage.removeItem(ACC_K);localStorage.removeItem(SAVE_KEY);location.reload();});}
+  await lockRelease();localStorage.removeItem(ACC_K);localStorage.removeItem(SAVE_KEY);location.reload();});}
 function accTitle(){const a=accGet();let el=$('accBar');if(!el){el=document.createElement('div');el.id='accBar';const t=$('title');t.insertBefore(el,t.children[2]);}
   el.innerHTML=a?`👤 ${cleanTxt(a.n)} · <a id="accOut">ออกจากระบบ</a>`:'';const o=$('accOut');if(o)o.onclick=accLogout;
   $('startBtn').style.display=a?'':'none';$('newBtn').style.visibility=a?'':'hidden';}
@@ -4166,7 +4184,10 @@ function accTitle(){const a=accGet();let el=$('accBar');if(!el){el=document.crea
 #accGate .agL{margin-top:8px;font-size:13.5px;color:#d7ccc8}#accGate a{color:#ffd54f;text-decoration:underline;cursor:pointer}
 #accGate .agNote{margin-top:10px;font-size:12.5px;color:#a5d6a7}
 #accBar{color:#ffe0b2;font-size:14px;margin:2px 0 6px}#accBar a{color:#ffd54f;text-decoration:underline;cursor:pointer}`;document.head.appendChild(st);}
-{const _sg=startGame;startGame=function(f){if(!accGet()){accUI('login');return;}return _sg(f);};}
+{const _sg=startGame;let busy=false;startGame=function(f){if(!accGet()){accUI('login');return;}if(LOCK.ok||window.__noLock)return _sg(f);if(busy)return;busy=true;
+  const b=$('startBtn'),t0=b.textContent;b.textContent='กำลังตรวจสอบบัญชี...';
+  lockClaim().then(ok=>{busy=false;b.textContent=t0;if(ok)_sg(f);else askBox('บัญชีนี้กำลังมีคนเล่นอยู่','มีเครื่องอื่นกำลังเล่นบัญชีนี้ เข้าได้เมื่ออีกเครื่องออกจากเกม (หรือรอประมาณ 1 นาทีหลังปิดเกม)',()=>{});})
+   .catch(e=>{busy=false;b.textContent=t0;console.warn('lock',e);window.__noLock=1;_sg(f);});};}
 setTimeout(()=>{try{accTitle();if(!accGet())accUI((S.level>1||S.exp>0)?'reg':'login');}catch(e){console.warn(e);}},0);
 // ================= Start / loop =================
 let glOK=false;
