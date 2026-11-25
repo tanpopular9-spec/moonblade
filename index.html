@@ -3460,7 +3460,7 @@ function hudApply(){window.__hudGS=S.hud.gs;document.documentElement.style.setPr
         el.style.setProperty('left',x+'px','important');el.style.setProperty('top',y+'px','important');el.style.setProperty('right','auto','important');el.style.setProperty('bottom','auto','important');el.style.setProperty('transform','none','important');}
       else for(const p of['left','top','right','bottom','transform'])el.style.removeProperty(p);
       el.style.scale=o.s&&o.s!==1?o.s:'';el.style.transformOrigin='0 0';}}
-  const dk=$('dock');if(dk){const dv=(L.dock||{}).dv;dk.style.flexDirection=dv===1?'row':dv===2?'column':'';dk.classList.toggle('col',!!S.hud.dc);}
+  const dk=$('dock');if(dk){const dv=(L.dock||{}).dv;dk.style.flexDirection=dv===1?'row':dv===2?'column':'';dk.classList.toggle('col',!!S.hud.dc);const tg=$('dkTog');if(tg){const isCol=getComputedStyle(dk).flexDirection==='column';const custom=L.dock&&L.dock.x!==undefined;tg.style.order=(isCol||custom)?'-1':'99';tg.textContent=S.hud.dc?'☰':'⋯';}}
   try{joyHome();}catch(_){}hudKeepOn();}
 function hudKeepOn(){const W=innerWidth,H=innerHeight;for(const[id,,t]of HUDM){if(t!=='cb')continue;const el=$(id);if(!el||el.classList.contains('hidden'))continue;const r=el.getBoundingClientRect();if(!r.width)continue;
   let fx=0,fy=0;if(r.left<0)fx=-r.left;if(r.right>W)fx=W-r.right;if(r.top<0)fy=-r.top;if(r.bottom>H)fy=H-r.bottom;if(fx||fy){const o=hudGet(id),cs=hudCs();o.dx=(o.dx||0)+fx/cs;o.dy=(o.dy||0)+fy/cs;el.style.translate=`${o.dx}px ${o.dy}px`;}}}
@@ -3470,7 +3470,7 @@ const HED={on:false,sel:null,drag:null,wasP:false};
   ['pointerdown','touchstart','mousedown','wheel'].forEach(ev=>{bar.addEventListener(ev,e=>e.stopPropagation(),{passive:true});mask.addEventListener(ev,e=>e.stopPropagation(),{passive:true});});
   const dk=$('dock');const tg=document.createElement('button');tg.id='dkTog';tg.setAttribute('aria-label','ซ่อน/แสดงเมนูลัด');tg.textContent='⋯';dk.insertBefore(tg,dk.firstChild);
   const hb=document.createElement('button');hb.id='dkHud';hb.setAttribute('aria-label','จัดวางปุ่ม');hb.textContent='🛠️';dk.appendChild(hb);
-  tg.onclick=()=>{if(HED.on)return;S.hud.dc=S.hud.dc?0:1;dk.classList.toggle('col',!!S.hud.dc);save();};hb.onclick=()=>{if(!HED.on)hudEdOpen();};
+  tg.onclick=()=>{if(HED.on)return;S.hud.dc=S.hud.dc?0:1;hudApply();save();};hb.onclick=()=>{if(!HED.on)hudEdOpen();};
   addEventListener('resize',()=>setTimeout(hudApply,60));setTimeout(hudApply,80);})();
 function hudBarRender(){const bar=$('hudBar');const sel=HUDM.find(h=>h[0]===HED.sel);const o=sel?hudGet(sel[0]):{};const sv=sel?(sel[2]==='joy'?S.hud.js:(o.s||1)):1;
   bar.innerHTML=`<div class="t">🛠️ จัดวางปุ่ม & หน้าจอ <small>(${hudO()==='p'?'แนวตั้ง':'แนวนอน'})</small><button data-h="mv" title="ย้ายแถบนี้">⇅</button></div>
@@ -3842,13 +3842,19 @@ const _envCols8=envCols;envCols=function(){const e=_envCols8();if(!styleReal()||
   return Object.assign({},e,{fr:[e.fr[0]*1.5,e.fr[1]*(1+0.9*d)],lc:e.lc.map((v,i)=>v*(1+0.12*d)),sky:(e.sky||Z.sky).map((v,i)=>v*(1+0.25*d)+[0,0.012,0.05][i]*d)});};
 const _postLook8=postLook;postLook=function(){const o=_postLook8();if(styleReal()&&Z&&Z.theme==='forest'){o.sat*=1.12;o.bloom*=1.25;o.rays*=1.35;o.con*=1.02;}return o;};
 
+
+function ensureS(){if(!S.eq||typeof S.eq!=='object')S.eq={};if(!Array.isArray(S.inv))S.inv=[];if(!S.buf||typeof S.buf!=='object')S.buf={};if(!S.shopRR||typeof S.shopRR!=='object')S.shopRR={};if(!Array.isArray(S.shopBuy))S.shopBuy=[];
+  if(!S.hud||typeof S.hud!=='object')S.hud={};if(!S.hud.L)S.hud.L={p:{},l:{}};if(!S.hud.L.p)S.hud.L.p={};if(!S.hud.L.l)S.hud.L.l={};if(!S.hud.gs)S.hud.gs=1;if(!S.hud.op)S.hud.op=1;if(!S.hud.js)S.hud.js=1;
+  if(S.camZ===undefined)S.camZ=1;if(S.camAF===undefined)S.camAF=1;if(!S.camV4){S.camV4=1;S.cam='ots';}if(!S.cam)S.cam='ots';if(S.style===undefined)S.style='real';if(!S.uid)S.uid=rid(12);if(!S.ck)S.ck=rid(16);}
+ensureS();
+const _rc9=recalc;recalc=function(){ensureS();_rc9();};
 // ================= Start / loop =================
 let glOK=false;
 if(!S.gfx)S.gfx=matchMedia('(pointer:coarse)').matches?'med':'high';window.__dprCap=(GFX[S.gfx]||GFX.med).dpr;resize();
 try{if(gl){initGL();initGeo();glOK=true;}}catch(e){console.error(e);}
 if(!glOK){$('glErr').classList.remove('hidden');$('startBtn').disabled=true;$('newBtn').disabled=true;}
 function startGame(fresh){if(!glOK)return;
-  initAudio();if(fresh){S=DEF();try{localStorage.removeItem(SAVE_KEY);}catch(_){}}recalc();
+  initAudio();if(fresh){S=DEF();try{localStorage.removeItem(SAVE_KEY);}catch(_){}ensureS();try{hudApply();}catch(_){}}recalc();
   $('title').classList.add('hidden');$('hud').classList.remove('hidden');if(isTouch){$('controls').classList.remove('hidden');setTimeout(()=>window.joyHome&&joyHome(),30);}
   started=true;paused=false;$('qtrack').classList.remove('hidden');const z=S.zone||0;enterZone(z,ZONES[z].spawnZ);P.hp=DS.maxHp;
   setTimeout(()=>chat('','ยินดีต้อนรับสู่ Moonblade Online 3D! ไปคุยกับ ไลรา หัวหน้ากิลด์ (❗) ตามลูกศรสีทอง',true),600);
