@@ -392,7 +392,7 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
 </div>
 
 <script>
-const BUILD='v10.2';
+const BUILD='v11';
 (function(){try{fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/const BUILD='([^']+)'/);
   if(m&&m[1]!==BUILD&&sessionStorage.getItem('mbUpd')!==m[1]){sessionStorage.setItem('mbUpd',m[1]);location.replace(location.pathname+'?v='+m[1]);}}).catch(()=>{});}catch(e){}})();
 </script>
@@ -1953,7 +1953,7 @@ function renderMenu(){
       <tr><td>เมือง & เควส</td><td>แต่ละแผนที่มีเมือง (เขตปลอดภัย ฟื้นเลือดเร็ว) · เดินเข้าใกล้ NPC แล้วกดปุ่ม 💬 (หรือ F) เพื่อคุย · ❗ = มีเควสหลักให้รับ · ❓ = ส่งเควสได้ · กระดานเควสในกิลด์รับได้ทีละ 3 เควส ทำซ้ำได้ · ลูกศรสีทองที่เท้าชี้ทางไปเป้าหมาย</td></tr>
       <tr><td>ผู้เล่นอื่น</td><td>นักผจญภัยชื่อสีฟ้าเป็นบอทจำลอง ช่วยตีมอนได้ แต่ EXP ได้เฉพาะมอนที่คุณตีโดน</td></tr>
       <tr><td>ตาย</td><td>เกิดใหม่ที่จุดเริ่มต้นของแผนที่ เสียทอง 10% · เซฟอัตโนมัติในเบราว์เซอร์นี้</td></tr></table></div>
-    <div class="card"><div class="row"><div class="grow"><div class="t">⚙️ ตั้งค่า</div></div><span class="d">กราฟิก:</span>${['high','med','low'].map(k=>`<button class="btn sm ${S.gfx===k?'gold':'alt'}" data-a="gfx:${k}">${GFX[k].name}</button>`).join('')}<button class="btn sm gold" data-a="style">${S.style==='cute'?'🎨 สไตล์ภาพ: น่ารัก':'🎨 สไตล์ภาพ: สมจริงอนิเมะ'}</button><button class="btn sm" data-a="kay">${S.kay===0?'🧍 ตัวละคร 3D: ปิด':'🧍 ตัวละคร 3D: เปิด'}</button><button class="btn sm" data-a="music">${S.music===0?'🎵 เพลงประกอบ: ปิด':'🎵 เพลงประกอบ: เปิด'}</button><button class="btn sm gold" data-a="hudEd">🛠️ จัดวางปุ่ม/หน้าจอ</button><button class="btn sm" data-a="sound">${S.sound?'🔊 เสียง: เปิด':'🔇 เสียง: ปิด'}</button><span class="d" style="flex-basis:100%;font-size:11px">โมเดล 3D: KayKit โดย Kay Lousberg (CC0)${window.KAY&&!KAY.ok&&KAY.err?' · โหลดไม่สำเร็จ: '+KAY.err:''}</span><button class="btn sm alt" data-a="reset">${resetArm?'⚠ กดอีกครั้งเพื่อยืนยันล้างเซฟ':'🗑 ล้างเซฟ'}</button></div></div>`;}
+    <div class="card"><div class="row"><div class="grow"><div class="t">⚙️ ตั้งค่า</div></div><span class="d">กราฟิก:</span>${['high','med','low'].map(k=>`<button class="btn sm ${S.gfx===k?'gold':'alt'}" data-a="gfx:${k}">${GFX[k].name}</button>`).join('')}<button class="btn sm gold" data-a="style">${S.style==='cute'?'🎨 สไตล์ภาพ: น่ารัก':'🎨 สไตล์ภาพ: สมจริงอนิเมะ'}</button><button class="btn sm" data-a="kay">${S.kay===0?'🧍 ตัวละคร 3D: ปิด':'🧍 ตัวละคร 3D: เปิด'}</button><button class="btn sm" data-a="logout">🚪 ออกจากระบบ</button><button class="btn sm" data-a="music">${S.music===0?'🎵 เพลงประกอบ: ปิด':'🎵 เพลงประกอบ: เปิด'}</button><button class="btn sm gold" data-a="hudEd">🛠️ จัดวางปุ่ม/หน้าจอ</button><button class="btn sm" data-a="sound">${S.sound?'🔊 เสียง: เปิด':'🔇 เสียง: ปิด'}</button><span class="d" style="flex-basis:100%;font-size:11px">โมเดล 3D: KayKit โดย Kay Lousberg (CC0)${window.KAY&&!KAY.ok&&KAY.err?' · โหลดไม่สำเร็จ: '+KAY.err:''}</span><button class="btn sm alt" data-a="reset">${resetArm?'⚠ กดอีกครั้งเพื่อยืนยันล้างเซฟ':'🗑 ล้างเซฟ'}</button></div></div>`;}
   $('menuBody').innerHTML=h;}
 $('menu').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||b.disabled)return;const[a,v]=b.dataset.a.split(':');if(a!=='reset')resetArm=false;
   switch(a){
@@ -1968,7 +1968,7 @@ $('menu').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!
   case 'upw':{const c=upCost(S.w[v].lv);if(S.gold>=c&&S.w[v].lv<10){S.gold-=c;S.w[v].lv++;SFX.lvl();}break;}
   case 'buyp':{const n=+v,c=n===5?140:30;if(S.gold>=c){S.gold-=c;S.potions+=n;SFX.coin();}break;}
   case 'buya':{const A=ARROWS[v],c=A.price*10;if(S.gold>=c){S.gold-=c;S.arrows[v]+=10;SFX.coin();}break;}
-  case 'hudEd':toggleMenu(false);hudEdOpen();return;case 'style':S.style=S.style==='cute'?'real':'cute';rebuildEnv();break;case 'music':S.music=S.music===0?1:0;if(S.music===0)musStop();save();break;case 'kay':S.kay=S.kay===0?1:0;if(S.kay&&!KAY.ok)kayLoad();else rebuildEnv();break;case 'sela':S.arrowSel=v;break;case 'sound':S.sound=S.sound?0:1;break;
+  case 'hudEd':toggleMenu(false);hudEdOpen();return;case 'style':S.style=S.style==='cute'?'real':'cute';rebuildEnv();break;case 'logout':toggleMenu(false);accLogout();return;case 'music':S.music=S.music===0?1:0;if(S.music===0)musStop();save();break;case 'kay':S.kay=S.kay===0?1:0;if(S.kay&&!KAY.ok)kayLoad();else rebuildEnv();break;case 'sela':S.arrowSel=v;break;case 'sound':S.sound=S.sound?0:1;break;
   case 'reset':if(!resetArm){resetArm=true;break;}try{localStorage.removeItem(SAVE_KEY);}catch(_){}location.reload();return;}
   save();renderMenu();updHUD();});
 
@@ -4107,6 +4107,64 @@ function mktGate(g){const gx=17.4,gz=9.5,stn=C('#9b958a'),dk=C('#6e695f'),tb=C('
 {const _bt=buildTown;buildTown=function(g,R){_bt(g,R);try{mktGate(g);}catch(e){console.warn(e);}};}
 {const _lv=labelVis;labelVis=function(ds){_lv(ds);if(Z&&Z.theme==='forest'&&S.zone===0){const p=proj(17.4,13.6,9.5);if(p&&p[2]<90){const pulse=1+0.08*Math.sin(frame*0.08);otext('🏪 ทางเข้าตลาด',p[0],p[1],Math.max(15,22*ds(p[2]))*pulse,'#ffd54f',900);}
   const q=proj(5.1,2.6,7.6);if(q&&q[2]<30)otext('ตลาด ➜',q[0],q[1],13*ds(q[2]),'#fff3c4',800);}};}
+
+// ===== v11: player accounts (name + password) =====
+const ACC_K='mb_acct';
+function accGet(){try{const a=JSON.parse(localStorage.getItem(ACC_K)||'null');return a&&a.k?a:null;}catch(e){return null;}}
+async function accDB(){let t=0;while(!(window.firebase&&firebase.database)&&t<160){if(t===30&&typeof fbLoadScripts==='function')try{fbLoadScripts();}catch(e){}await new Promise(r=>setTimeout(r,150));t++;}
+  if(!(window.firebase&&firebase.database))throw new Error('เชื่อมต่ออินเทอร์เน็ตไม่ได้');if(!window._accApp)window._accApp=firebase.initializeApp(FB_CONFIG,'acct');return firebase.database(window._accApp);}
+const _te=new TextEncoder(),_hx=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+async function accKey(n){return _hx(await crypto.subtle.digest('SHA-256',_te.encode('mb-acc:'+n.trim().toLowerCase()))).slice(0,28);}
+async function accHash(pw,salt){const k=await crypto.subtle.importKey('raw',_te.encode(pw),'PBKDF2',false,['deriveBits']);return _hx(await crypto.subtle.deriveBits({name:'PBKDF2',salt:_te.encode('mb:'+salt),iterations:60000,hash:'SHA-256'},k,256));}
+function accSet(a){localStorage.setItem(ACC_K,JSON.stringify(a));try{localStorage.setItem('mb_net_name',a.n);}catch(e){}NET.name=a.n;}
+function accUI(mode){let el=$('accGate');if(!el){el=document.createElement('div');el.id='accGate';document.body.appendChild(el);}
+  const T={login:['🔐 เข้าสู่ระบบ','เข้าเกม'],reg:['✨ สมัครบัญชีใหม่','สมัครและเข้าเกม'],forgot:['🔑 ตั้งรหัสผ่านใหม่','ตั้งรหัสใหม่']}[mode];
+  el.innerHTML=`<div class="agIn"><div class="agT">ตำนานดาบจันทรา</div><div class="agH">${T[0]}</div>
+    <input id="agN" maxlength="16" placeholder="ชื่อผู้เล่น" autocomplete="username">
+    ${mode==='forgot'?'<input id="agC" maxlength="19" placeholder="รหัสตัวละคร 16 ตัว (ดูได้ในเมนูผู้เล่น)">':''}
+    <input id="agP" type="password" maxlength="40" placeholder="${mode==='forgot'?'รหัสผ่านใหม่':'รหัสผ่าน'}" autocomplete="${mode==='login'?'current-password':'new-password'}">
+    ${mode!=='login'?'<input id="agP2" type="password" maxlength="40" placeholder="ยืนยันรหัสผ่านอีกครั้ง" autocomplete="new-password">':''}
+    <div id="agMsg"></div><button class="btn gold big" id="agGo">${T[1]}</button>
+    <div class="agL">${mode==='login'?'<a data-m="reg">ยังไม่มีบัญชี? สมัครใหม่</a> · <a data-m="forgot">ลืมรหัสผ่าน</a>':'<a data-m="login">มีบัญชีแล้ว? เข้าสู่ระบบ</a>'}</div>
+    ${mode==='reg'&&(S.level>1||S.exp>0)?`<div class="agNote">ตัวละครที่อยู่ในเครื่องนี้ (Lv.${S.level}) จะผูกกับบัญชีที่สมัคร</div>`:''}</div>`;
+  el.classList.remove('hidden');el.querySelectorAll('a[data-m]').forEach(a=>a.onclick=()=>accUI(a.dataset.m));
+  const msg=t=>{$('agMsg').textContent=t;};const go=$('agGo');
+  go.onclick=async()=>{const n=cleanTxt($('agN').value).trim().slice(0,16),pw=$('agP').value,p2=$('agP2')?$('agP2').value:pw;
+    if(n.length<2)return msg('ชื่อผู้เล่นต้องมีอย่างน้อย 2 ตัวอักษร');if(pw.length<4)return msg('รหัสผ่านต้องมีอย่างน้อย 4 ตัว');if(pw!==p2)return msg('รหัสผ่านทั้งสองช่องไม่ตรงกัน');
+    go.disabled=true;msg('กำลังเชื่อมต่อ...');
+    try{const db=await accDB(),key=await accKey(n),ref=db.ref('accounts/'+key);const snap=await ref.once('value'),A=snap.val();
+      if(mode==='reg'){if(A){go.disabled=false;return msg('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น');}
+        const salt=rid(12),h=await accHash(pw,salt);const r=await ref.transaction(c=>c?undefined:{n,s:salt,h,ck:S.ck,t:Date.now()});
+        if(!r.committed){go.disabled=false;return msg('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น');}
+        S.acc=key;save();try{await cloudSave(true);}catch(e){}accSet({k:key,n,ck:S.ck});el.classList.add('hidden');accTitle();toast('✅ สมัครบัญชีสำเร็จ ยินดีต้อนรับ '+n);return;}
+      if(!A){go.disabled=false;return msg('ไม่พบชื่อผู้เล่นนี้');}
+      if(mode==='forgot'){const code=String($('agC').value||'').toLowerCase().replace(/[^a-z0-9]/g,'');if(code!==A.ck){go.disabled=false;return msg('รหัสตัวละครไม่ถูกต้อง');}
+        const salt=rid(12),h=await accHash(pw,salt);await ref.update({s:salt,h});msg('');go.disabled=false;accUI('login');$('agMsg').textContent='ตั้งรหัสผ่านใหม่แล้ว เข้าสู่ระบบได้เลย';$('agN').value=n;return;}
+      if(await accHash(pw,A.s)!==A.h){go.disabled=false;return msg('รหัสผ่านไม่ถูกต้อง');}
+      accSet({k:key,n:A.n||n,ck:A.ck});
+      if(S.ck===A.ck){S.acc=key;save();el.classList.add('hidden');accTitle();toast('ยินดีต้อนรับกลับ '+(A.n||n));return;}
+      msg('กำลังโหลดตัวละคร...');const sv=(await db.ref('saves/'+A.ck).once('value')).val();
+      if(sv&&typeof sv.d==='string'){const j=JSON.parse(sv.d);j.ck=A.ck;j.acc=key;localStorage.setItem(SAVE_KEY,JSON.stringify(j));}
+      else{const j=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');j.ck=A.ck;j.acc=key;localStorage.setItem(SAVE_KEY,JSON.stringify(j));}
+      location.reload();}
+    catch(e){go.disabled=false;msg('เกิดข้อผิดพลาด: '+(e&&e.message||e)+(String(e).includes('PERMISSION')?' (ฐานข้อมูลไม่อนุญาต)':''));}};
+  el.querySelectorAll('input').forEach(i=>i.addEventListener('keydown',ev=>{if(ev.key==='Enter')go.click();}));}
+function accLogout(){askBox('ออกจากระบบ?','ตัวละครจะถูกเก็บไว้บนเซิร์ฟเวอร์ เข้าสู่ระบบใหม่เมื่อไหร่ก็เล่นต่อได้',async()=>{try{await cloudSave(true);}catch(e){}
+  localStorage.removeItem(ACC_K);localStorage.removeItem(SAVE_KEY);location.reload();});}
+function accTitle(){const a=accGet();let el=$('accBar');if(!el){el=document.createElement('div');el.id='accBar';const t=$('title');t.insertBefore(el,t.children[2]);}
+  el.innerHTML=a?`👤 ${cleanTxt(a.n)} · <a id="accOut">ออกจากระบบ</a>`:'';const o=$('accOut');if(o)o.onclick=accLogout;
+  $('startBtn').style.display=a?'':'none';$('newBtn').style.visibility=a?'':'hidden';}
+{const st=document.createElement('style');st.textContent=`
+#accGate{position:fixed;inset:0;z-index:9500;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 35%,rgba(70,45,20,.9),rgba(10,6,2,.97) 72%);overflow:auto}
+#accGate.hidden{display:none}#accGate .agIn{width:min(360px,90vw);text-align:center;padding:14px 0}
+#accGate .agT{font-size:26px;font-weight:900;color:#ffd54f;text-shadow:0 0 14px #ff8f00}#accGate .agH{font-size:17px;color:#ffe0b2;margin:4px 0 10px}
+#accGate input{display:block;width:100%;box-sizing:border-box;margin:7px 0;padding:11px 12px;font:inherit;font-size:16px;border-radius:10px;border:2px solid #8d6e63;background:#1e140c;color:#fff}
+#accGate input:focus{outline:none;border-color:#ffca28}#agMsg{min-height:20px;color:#ff8a80;font-size:13.5px;margin:4px 0}
+#accGate .agL{margin-top:8px;font-size:13.5px;color:#d7ccc8}#accGate a{color:#ffd54f;text-decoration:underline;cursor:pointer}
+#accGate .agNote{margin-top:10px;font-size:12.5px;color:#a5d6a7}
+#accBar{color:#ffe0b2;font-size:14px;margin:2px 0 6px}#accBar a{color:#ffd54f;text-decoration:underline;cursor:pointer}`;document.head.appendChild(st);}
+{const _sg=startGame;startGame=function(f){if(!accGet()){accUI('login');return;}return _sg(f);};}
+setTimeout(()=>{try{accTitle();if(!accGet())accUI((S.level>1||S.exp>0)?'reg':'login');}catch(e){console.warn(e);}},0);
 // ================= Start / loop =================
 let glOK=false;
 if(!S.gfx)S.gfx=matchMedia('(pointer:coarse)').matches?'med':'high';window.__dprCap=(GFX[S.gfx]||GFX.med).dpr;resize();
