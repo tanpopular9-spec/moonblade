@@ -383,6 +383,7 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
       <button class="tab" data-a="tab:weap">⚔️ อาวุธ</button>
       <button class="tab" data-a="tab:arrow">🏹 ธนู & ร้านค้า</button>
       <button class="tab" data-a="tab:world">🌕 โลก</button>
+      <button class="tab hidden" id="admTab" data-a="tab:admin">🛡️ แอดมิน</button>
       <button class="tab" data-a="tab:help">❓ วิธีเล่น</button>
       <span class="sp"></span>
       <span class="gold" id="mGold"></span>
@@ -393,7 +394,7 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
 </div>
 
 <script>
-const BUILD='v13b';
+const BUILD='v14b';
 (function(){try{fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/const BUILD='([^']+)'/);
   if(m&&m[1]!==BUILD&&sessionStorage.getItem('mbUpd')!==m[1]){sessionStorage.setItem('mbUpd',m[1]);location.replace(location.pathname+'?v='+m[1]);}}).catch(()=>{});}catch(e){}})();
 </script>
@@ -1943,6 +1944,7 @@ function renderMenu(){
         ${A.price?(lock?`<button class="btn sm alt" disabled>🔒 ปลดล็อก Lv.${A.need}</button>`:`<button class="btn sm gold" data-a="buya:${k}" ${S.gold>=A.price*10?'':'disabled'}>ซื้อ x10 💰${A.price*10}</button>`):''}</div></div>`;}
     h+='</div><div class="d" style="margin-top:8px">ลูกธนูทุกชนิดดรอปจากมอนสเตอร์ได้ · ธนูหายากดรอปน้อย · ธนูแสงสวรรค์ (ตำนาน) ได้จากบอสเป็นหลัก</div>';}
   else if(menuTab==='world'){h=soulCard()+townCard()+worldInfo();}
+  else if(menuTab==='admin'){h=admCard();}
   else{h+=`<div class="card"><div class="t">🎮 การควบคุม (3D)</div><table class="help">
       <tr><td>มือถือ</td><td>แตะค้างแล้วลากที่ครึ่งซ้ายล่างของจอ = จอยเดิน · ลากที่ว่างบนจอ = หมุนกล้อง/ก้มเงย · ⚔ โจมตี (แตะรัว = คอมโบ / กดค้าง = ตีต่อเนื่อง) · ⤒ กระโดด (กดซ้ำกลางอากาศ = กระโดดสองชั้น) · » แดช · ✦ สกิล · ☄ อันติ · 🧪 ยา · สลับอาวุธ · ➶ ลูกธนู</td></tr>
       <tr><td>คีย์บอร์ด</td><td>WASD เดิน · ลากเมาส์ หรือ ←/→/↑/↓ หมุนกล้อง · ลูกกลิ้งเมาส์ ซูม · Space กระโดด · J/Z โจมตี · K/Shift/X แดช · L/C สกิล · U/V อันติ · H ยา · Q/E สลับอาวุธ · 1–6 เลือกอาวุธ · R ลูกธนู · Esc/I เมนู</td></tr></table></div>
@@ -1972,7 +1974,7 @@ $('menu').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!
   case 'upw':{const c=upCost(S.w[v].lv);if(S.gold>=c&&S.w[v].lv<10){S.gold-=c;S.w[v].lv++;SFX.lvl();}break;}
   case 'buyp':{const n=+v,c=n===5?140:30;if(S.gold>=c){S.gold-=c;S.potions+=n;SFX.coin();}break;}
   case 'buya':{const A=ARROWS[v],c=A.price*10;if(S.gold>=c){S.gold-=c;S.arrows[v]+=10;SFX.coin();}break;}
-  case 'hudEd':toggleMenu(false);hudEdOpen();return;case 'style':S.style=S.style==='cute'?'real':'cute';rebuildEnv();break;case 'logout':toggleMenu(false);accLogout();return;case 'donate':townDonate(+v);break;case 'brjoin':brJoin();break;case 'soulnm':{const n=prompt('ตั้งชื่อดาบของคุณ',soul().nm);if(n&&cleanTxt(n).trim()){soul().nm=cleanTxt(n).trim().slice(0,14);save();}}break;case 'music':S.music=S.music===0?1:0;if(S.music===0)musStop();save();break;case 'kay':S.kay=S.kay===0?1:0;if(S.kay&&!KAY.ok)kayLoad();else rebuildEnv();break;case 'sela':S.arrowSel=v;break;case 'sound':S.sound=S.sound?0:1;break;
+  case 'hudEd':toggleMenu(false);hudEdOpen();return;case 'style':S.style=S.style==='cute'?'real':'cute';rebuildEnv();break;case 'logout':toggleMenu(false);accLogout();return;case 'donate':townDonate(+v);break;case 'brjoin':brJoin();break;case 'admpin':case 'admr':case 'admf':case 'ban':case 'unban':admAct(a,v);return;case 'soulnm':{const n=prompt('ตั้งชื่อดาบของคุณ',soul().nm);if(n&&cleanTxt(n).trim()){soul().nm=cleanTxt(n).trim().slice(0,14);save();}}break;case 'music':S.music=S.music===0?1:0;if(S.music===0)musStop();save();break;case 'kay':S.kay=S.kay===0?1:0;if(S.kay&&!KAY.ok)kayLoad();else rebuildEnv();break;case 'sela':S.arrowSel=v;break;case 'sound':S.sound=S.sound?0:1;break;
   case 'reset':if(!resetArm){resetArm=true;break;}try{localStorage.removeItem(SAVE_KEY);}catch(_){}location.reload();return;}
   save();renderMenu();updHUD();});
 
@@ -4191,6 +4193,18 @@ function accTitle(){const a=accGet();let el=$('accBar');if(!el){el=document.crea
 #accGate input:focus{outline:none;border-color:#ffca28}#agMsg{min-height:20px;color:#ff8a80;font-size:13.5px;margin:4px 0}
 #accGate .agL{margin-top:8px;font-size:13.5px;color:#d7ccc8}#accGate a{color:#ffd54f;text-decoration:underline;cursor:pointer}
 #accGate .agNote{margin-top:10px;font-size:12.5px;color:#a5d6a7}
+#banGate{position:fixed;inset:0;z-index:9500;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 35%,rgba(70,45,20,.9),rgba(10,6,2,.97) 72%);overflow:auto}
+#banGate.hidden{display:none}
+#banGate .agIn{width:min(360px,90vw);text-align:center;padding:14px 0}
+#banGate .agT{font-size:26px;font-weight:900;color:#ffd54f;text-shadow:0 0 14px #ff8f00}
+#banGate .agH{font-size:17px;color:#ffe0b2;margin:4px 0 10px}
+#banGate input{display:block;width:100%;box-sizing:border-box;margin:7px 0;padding:11px 12px;font:inherit;font-size:16px;border-radius:10px;border:2px solid #8d6e63;background:#1e140c;color:#fff}
+#banGate input:focus{outline:none;border-color:#ffca28}
+#banGate .agL{margin-top:8px;font-size:13.5px;color:#d7ccc8}
+#banGate a{color:#ffd54f;text-decoration:underline;cursor:pointer}
+#banGate .agNote{margin-top:10px;font-size:12.5px;color:#a5d6a7}
+body:has(#menu:not(.hidden)) #brBtn{display:none!important}
+#banGate{z-index:99999!important}
 #accBar{color:#ffe0b2;font-size:14px;margin:2px 0 6px}#accBar a{color:#ffd54f;text-decoration:underline;cursor:pointer}`;document.head.appendChild(st);}
 {const _sg=startGame;let busy=false;startGame=function(f){if(!accGet()){accUI('login');return;}if(LOCK.ok||window.__noLock)return _sg(f);if(busy)return;busy=true;
   const b=$('startBtn'),t0=b.textContent;b.textContent='กำลังตรวจสอบบัญชี...';
@@ -4470,6 +4484,74 @@ function soulUI(){let el=$('soulSay');if(SOULT.t>0&&SOULT.say){if(!el){el=docume
 setInterval(()=>{try{if(typeof paused!=='undefined'&&paused)return;if(!$('title').classList.contains('hidden'))return;soulTick();townTick();townBar();bmTick();brTick();soulUI();}catch(e){console.warn('v12 tick',e);}},500);
 setInterval(()=>{if(S.zone===0||!WR.ok)worldPull(WR.ok);},20000);setTimeout(()=>worldPull(false),2500);
 
+
+// ===================== v13: roster (who plays / online) + admin ban system =====================
+const ADMINS=['tan'];
+const isAdminName=()=>{const a=accGet();return !!(a&&ADMINS.includes(String(a.n||'').trim().toLowerCase()));};
+const ADM_H='d4fae6f87fc089172a7954243f4cc3e994e71bf596689df2b723bc1260a06619';let ADM_OK=false;try{ADM_OK=sessionStorage.getItem('mb_admok')===ADM_H;}catch(e){}
+const isAdmin=()=>isAdminName()&&ADM_OK;
+async function admPin(pin){const k=await crypto.subtle.importKey('raw',_te.encode(String(pin||'').trim()),'PBKDF2',false,['deriveBits']);
+  return _hx(await crypto.subtle.deriveBits({name:'PBKDF2',salt:_te.encode('mb-admin:tan'),iterations:200000,hash:'SHA-256'},k,256))===ADM_H;}
+function admUnlockCard(){return `<div class="card"><div class="t">🔐 ยืนยันรหัสแอดมิน</div><div class="d">ใส่รหัสแอดมินเพื่อเปิดระบบควบคุม</div>
+  <div class="row" style="gap:8px;margin-top:8px"><input id="admPinIn" type="password" inputmode="numeric" maxlength="12" placeholder="รหัสแอดมิน" style="flex:1;padding:8px;border-radius:8px;border:1px solid #8d6e63;background:#1b120c;color:#fff">
+  <button class="btn gold" data-a="admpin">ยืนยัน</button></div></div>`;}
+const ADM={ro:{},bans:{},at:0,busy:false,f:'all'};
+const hesc=t=>cleanTxt(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function docRef(tag){const db=await accDB();return db.ref('saves/'+_hx(await crypto.subtle.digest('SHA-256',_te.encode(tag))).slice(0,16));}
+const docParse=v=>{if(!v||typeof v.d!=='string')return null;try{return JSON.parse(v.d);}catch(e){return null;}};
+const docPack=(o,n)=>({d:JSON.stringify(o),t:firebase.database.ServerValue.TIMESTAMP,n:n||'sys',lv:0});
+const srvNow=()=>typeof lockNow==='function'?lockNow():Date.now();
+// --- roster heartbeat (every player) ---
+async function rosterBeat(first){const a=accGet();if(!a||window.__kicked)return;try{const ref=await docRef('mb-roster-v1');
+  await ref.transaction(c=>{const o=docParse(c)||{p:{}};o.p=o.p||{};const e=o.p[a.k]||{f:srvNow()};
+    Object.assign(e,{n:cleanTxt(a.n).slice(0,16),lv:S.level|0,z:S.zone|0,hb:srvNow(),br:BR&&BR.on?1:0,cl:S.cls||''});if(first)e.ln=(e.ln|0)+1;o.p[a.k]=e;return docPack(o,'roster');});}catch(e){console.warn('roster',e);}}
+// --- bans ---
+async function banGet(){try{const ref=await docRef('mb-ban-v1');return (docParse((await ref.once('value')).val())||{}).b||{};}catch(e){return null;}}
+const banActive=e=>!!(e&&(!e.u||e.u>srvNow()));
+function banText(e){return e.u?'ถึง '+new Date(e.u).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}):'ถาวร';}
+async function banSet(k,n,ms,why){const ref=await docRef('mb-ban-v1');const r=await ref.transaction(c=>{const o=docParse(c)||{b:{}};o.b=o.b||{};
+    if(ms===null)delete o.b[k];else o.b[k]={n:cleanTxt(n).slice(0,16),u:ms?srvNow()+ms:0,t:srvNow(),w:cleanTxt(why||'').slice(0,60),by:accGet().n};return docPack(o,'ban');});
+  return r&&r.committed;}
+function banScreen(e){let el=$('banGate');if(!el){el=document.createElement('div');el.id='banGate';document.body.appendChild(el);}
+  el.innerHTML=`<div class="agIn" style="border-color:#ff1744"><div class="agT">⛔ บัญชีนี้ถูกแบน</div><div class="agH">${hesc(accGet()?accGet().n:'')}</div>
+   <div style="color:#ffcdd2;margin:8px 0">ระยะเวลา: ${banText(e)}${e.w?'<br>เหตุผล: '+hesc(e.w):''}</div><button class="btn" id="banOut">ออกจากระบบ</button></div>`;
+  $('banOut').onclick=()=>{try{localStorage.removeItem(ACC_K);localStorage.removeItem(SAVE_KEY);}catch(er){}location.reload();};}
+async function banCheck(){const a=accGet();if(!a||isAdminName())return false;const b=await banGet();const e=b&&b[a.k];if(!banActive(e))return false;
+  window.__kicked=1;try{await lockRelease();}catch(er){}paused=true;banScreen(e);return true;}
+{const _sg=startGame;startGame=function(f){if(!accGet()||window.__banOK)return _sg(f);const b=$('startBtn'),t0=b.textContent;b.textContent='กำลังตรวจสอบบัญชี...';
+  banCheck().then(x=>{b.textContent=t0;if(!x){window.__banOK=1;_sg(f);}}).catch(()=>{b.textContent=t0;window.__banOK=1;_sg(f);});};}
+// --- admin panel ---
+async function admLoad(){if(ADM.busy)return;ADM.busy=true;try{const [r,b]=await Promise.all([docRef('mb-roster-v1').then(x=>x.once('value')),banGet()]);
+  ADM.ro=(docParse(r.val())||{}).p||{};ADM.bans=b||{};ADM.at=Date.now();}catch(e){toast('โหลดรายชื่อไม่ได้');}ADM.busy=false;
+  if(menuTab==='admin'&&!$('menu').classList.contains('hidden'))renderMenu();}
+function agoTxt(t){const s=Math.max(0,(srvNow()-t)/1000|0);return s<90?'ออนไลน์':s<3600?(s/60|0)+' นาทีที่แล้ว':s<86400?(s/3600|0)+' ชม.ที่แล้ว':(s/86400|0)+' วันที่แล้ว';}
+function admCard(){if(!isAdminName())return '<div class="card">ไม่มีสิทธิ์</div>';if(!ADM_OK)return admUnlockCard();if(!ADM.at)admLoad();
+  const keys=new Set([...Object.keys(ADM.ro),...Object.keys(ADM.bans)]);const L=[...keys].map(k=>{const e=ADM.ro[k]||{n:(ADM.bans[k]||{}).n||'?',hb:0};return Object.assign({k,on:srvNow()-(e.hb||0)<100000,ban:ADM.bans[k]&&banActive(ADM.bans[k])?ADM.bans[k]:null},e);})
+    .sort((a,b)=>(b.on-a.on)||((b.hb||0)-(a.hb||0)));
+  const nOn=L.filter(x=>x.on).length,nBan=L.filter(x=>x.ban).length;
+  const Ls=L.filter(x=>ADM.f==='all'||(ADM.f==='on'&&x.on)||(ADM.f==='ban'&&x.ban));
+  const fb=(k,t)=>`<button class="btn sm ${ADM.f===k?'gold':'alt'}" data-a="admf:${k}">${t}</button>`;
+  return `<div class="card"><div class="row"><div class="grow"><div class="t">🛡️ ระบบแอดมิน · ผู้เล่นทั้งหมด ${L.length} คน</div>
+    <div class="d">🟢 ออนไลน์ตอนนี้ ${nOn} คน · ⛔ ถูกแบน ${nBan} คน · อัปเดต ${ADM.at?new Date(ADM.at).toLocaleTimeString('th-TH'):'...'}</div></div>
+    <button class="btn sm" data-a="admr">🔄 รีเฟรช</button></div><div class="row" style="gap:6px;margin-top:6px">${fb('all','ทั้งหมด')}${fb('on','🟢 ออนไลน์')}${fb('ban','⛔ ถูกแบน')}</div></div>
+   ${Ls.length?Ls.map(x=>`<div class="card" style="padding:8px 12px;${x.ban?'border-color:#ff5252':''}"><div class="row" style="flex-wrap:wrap;gap:6px">
+     <div class="grow"><div class="t">${x.on?'🟢':'⚪'} ${hesc(x.n)} <span style="color:#ffd54f">Lv.${x.lv|0}</span>${ADMINS.includes(String(x.n).toLowerCase())?' 👑':''}</div>
+     <div class="d">${x.hb?agoTxt(x.hb):'ยังไม่เคยออนไลน์'}${x.on&&ZONES[x.z]?' · '+ZONES[x.z].name:''}${x.br?' · กำลังเล่นศึกจันทรา':''} · เข้าเกม ${x.ln|0} ครั้ง · ID ${x.k}</div>
+     ${x.ban?`<div class="d" style="color:#ff8a80">⛔ แบน ${banText(x.ban)}${x.ban.w?' · '+hesc(x.ban.w):''}</div>`:''}</div>
+     ${ADMINS.includes(String(x.n).toLowerCase())?'':x.ban?`<button class="btn sm gold" data-a="unban:${x.k}">ปลดแบน</button>`:
+       `<button class="btn sm alt" data-a="ban:${x.k}|3600000">แบน 1 ชม.</button><button class="btn sm alt" data-a="ban:${x.k}|86400000">แบน 1 วัน</button><button class="btn sm" style="background:#b71c1c" data-a="ban:${x.k}|0">แบนถาวร</button>`}
+   </div></div>`).join(''):'<div class="card"><div class="d">ไม่มีรายชื่อ</div></div>'}
+   <div class="d" style="margin:4px 2px">ผู้ที่ถูกแบนจะถูกเด้งออกจากเกมภายใน 30 วินาที และเข้าเกมไม่ได้จนกว่าจะหมดเวลาหรือปลดแบน</div>`;}
+function admAct(a,v){if(a==='admpin'){if(!isAdminName())return;const el=$('admPinIn');const pin=el?el.value:'';
+    admPin(pin).then(ok=>{if(ok){ADM_OK=true;try{sessionStorage.setItem('mb_admok',ADM_H);}catch(e){}toast('🛡️ เปิดระบบแอดมินแล้ว');ADM.at=0;renderMenu();}else{toast('❌ รหัสแอดมินไม่ถูกต้อง');if(el)el.value='';}});return;}
+  if(!isAdmin())return;
+  if(a==='admr'){admLoad();return;}if(a==='admf'){ADM.f=v;renderMenu();return;}
+  if(a==='ban'){const[k,ms]=v.split('|');const e=ADM.ro[k]||{};const why=prompt('เหตุผลที่แบน "'+cleanTxt(e.n||k)+'" (เว้นว่างได้)','')||'';if(why===null)return;
+    banSet(k,e.n||k,+ms,why).then(ok=>{toast(ok?'⛔ แบนแล้ว':'แบนไม่สำเร็จ');admLoad();});return;}
+  if(a==='unban'){banSet(v,'',null).then(ok=>{toast(ok?'✅ ปลดแบนแล้ว':'ไม่สำเร็จ');admLoad();});}}
+setInterval(()=>{if(started&&!window.__kicked){rosterBeat(false);banCheck();}if(menuTab==='admin'&&!$('menu').classList.contains('hidden'))admLoad();},30000);
+{const _sg2=startGame;startGame=function(f){const r=_sg2(f);setTimeout(()=>{if(started)rosterBeat(true);},2500);return r;};}
+setTimeout(()=>{const t=$('admTab');if(t)t.classList.toggle('hidden',!isAdminName());},0);
 
 // ================= Start / loop =================
 let glOK=false;
