@@ -305,6 +305,7 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js" defer></script>
 </head>
 <body>
 <div id="stars"></div><div id="moon"></div>
@@ -394,7 +395,7 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
 </div>
 
 <script>
-const BUILD='v14b';
+const BUILD='v15';
 (function(){try{fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/const BUILD='([^']+)'/);
   if(m&&m[1]!==BUILD&&sessionStorage.getItem('mbUpd')!==m[1]){sessionStorage.setItem('mbUpd',m[1]);location.replace(location.pathname+'?v='+m[1]);}}).catch(()=>{});}catch(e){}})();
 </script>
@@ -2443,7 +2444,7 @@ const NET={lobby:null,R:null,code:'',name:'',st:'off',me:'',peers:[],host:true,h
 try{NET.name=(localStorage.getItem('mb_net_name')||'').slice(0,16);NET.code=(localStorage.getItem('mb_net_code')||'').slice(0,12);}catch(_){}
 if(!NET.name)NET.name='ผู้กล้า'+ri(100,999);
 const r2=v=>Math.round(v*100)/100,r1=v=>Math.round(v*10)/10,r3=v=>Math.round(v*1000)/1000;
-const cleanTxt=s=>String(s==null?'':s).replace(/[\u0000-\u001f\u007f-\u009f­​-‏‪-‮⁠-⁯﻿-]/g,'').trim();
+const cleanTxt=s=>String(s==null?'':s).replace(/[<>&"'`\\]/g,'').replace(/[\u0000-\u001f\u007f-\u009f­​-‏‪-‮⁠-⁯﻿-]/g,'').trim();
 const HEX=/^#[0-9a-fA-F]{6}$/,HEADS=['cap','circlet','cowl','crown','helm','helm_open','hood','horned','mask','tricorn'];
 const num=(v,d)=>typeof v==='number'&&isFinite(v)?v:d;
 function VIS(){return NET.rl.length?NET.rl:bots;}
@@ -2467,7 +2468,7 @@ function drawRemote(b){if(b.dead||b.sh)return;OP={a:1,f:b.flash>0?0.3:0};
 const FB_CONFIG={apiKey:"AIzaSyCSRtwU86NcHBfmgsGCzO_h7fhseXQByFs",authDomain:"moonblade-30c75.firebaseapp.com",databaseURL:"https://moonblade-30c75-default-rtdb.firebaseio.com",projectId:"moonblade-30c75",storageBucket:"moonblade-30c75.firebasestorage.app",messagingSenderId:"733799875584",appId:"1:733799875584:web:ba2dc0e7b76720480844e5"};
 const FB_HZ=150; // ms between writes (~6-7 per second)
 function fbTransport(){
-  const app=firebase.initializeApp(FB_CONFIG);const db=firebase.database(app);window.FBDB=db;
+  const app=fbApp();const db=firebase.database(app);window.FBDB=db;
   const me=(()=>{const a='abcdefghijklmnopqrstuvwxyz0123456789';let s='';for(let i=0;i<16;i++)s+=a[Math.floor(Math.random()*a.length)];return s;})();
   let offset=0,conn=false;const connL=[];
   db.ref('.info/serverTimeOffset').on('value',s=>{offset=s.val()||0;window.FB_OFF=offset;});
@@ -2486,7 +2487,7 @@ function fbTransport(){
     const iv=setInterval(()=>{if(!left)fire();},1000);
     const write=()=>{timer=null;if(left)return;lastW=Date.now();
       if(mine.away){if(!removed){removed=true;myRef.remove().catch(()=>{});}return;}
-      removed=false;const o=clean(mine);o._t=firebase.database.ServerValue.TIMESTAMP;myRef.set(o).then(()=>{if(NET.err&&NET.err.startsWith('ส่งข้อมูล')){NET.err='';}}).catch(e=>{NET.err='ส่งข้อมูลไม่ได้: '+(e&&e.message||e);console.warn('fb write',e);});};
+      removed=false;const o=clean(mine);o._k=(accGet()||{}).k||'';o._t=firebase.database.ServerValue.TIMESTAMP;myRef.set(o).then(()=>{if(NET.err&&NET.err.startsWith('ส่งข้อมูล')){NET.err='';}}).catch(e=>{NET.err='ส่งข้อมูลไม่ได้: '+(e&&e.message||e);console.warn('fb write',e);});};
     return{name:path,
       presence(patch){if(left)return Promise.reject({code:'invalid_argument'});for(const k in patch){if(patch[k]===null)delete mine[k];else mine[k]=patch[k];}dirty=true;
         const wait=FB_HZ-(Date.now()-lastW);if(!timer)timer=setTimeout(write,Math.max(0,wait));return Promise.resolve();},
@@ -2498,11 +2499,12 @@ function fbTransport(){
       join(n){return Promise.resolve(mk('rooms/'+String(n).replace(/[^a-z0-9-]/g,'').slice(0,40)));}};}
   return mk('rooms/lobby');}
 function fbLoadScripts(){const V='https://www.gstatic.com/firebasejs/10.14.1/';const add=(f,cb)=>{const s=document.createElement('script');s.src=V+f+'?r='+Date.now();s.onload=cb;s.onerror=()=>{NET.err='โหลดไฟล์ระบบออนไลน์ไม่สำเร็จ (เน็ตอาจช้าหรือถูกบล็อก)';netUI();};document.head.appendChild(s);};
-  if(!window.firebase)add('firebase-app-compat.js',()=>add('firebase-database-compat.js',()=>{}));else if(!firebase.database)add('firebase-database-compat.js',()=>{});}
+  const au=()=>{if(!firebase.auth)add('firebase-auth-compat.js',()=>{});};if(!window.firebase)add('firebase-app-compat.js',()=>add('firebase-database-compat.js',au));else if(!firebase.database)add('firebase-database-compat.js',au);else au();}
 let netInitBusy=false;
 async function netInit(){
   if(netInitBusy||NET.lobby)return;netInitBusy=true;NET.err='';NET.st='conn';netUI();
   let tries=0;while(!(window.firebase&&firebase.database)&&tries<200){if(tries===60||tries===140)fbLoadScripts();await new Promise(r=>setTimeout(r,150));tries++;}
+  if(window.firebase&&firebase.database&&!window.__noLock){try{await authReady();}catch(e){}}
   netInitBusy=false;
   if(!(window.firebase&&firebase.database)){NET.st='off';if(!NET.err)NET.err='โหลดระบบออนไลน์ไม่ทันเวลา';netUI();return;}
   NET.st='conn';netUI();
@@ -2863,7 +2865,7 @@ function updPvp(m){const loss=1e6-m.hp;if(loss>0){NET.pvpOut.set(m.peer,(NET.pvp
 function pvpRecv(p,b,nm){const q=p.presence;
   if(Array.isArray(q.pk)){let cum=0;for(const e of q.pk)if(Array.isArray(e)&&e[0]===NET.me)cum=num(e[1],0);
     const seen=NET.pvpSeen.get(p.peer)??0;if(cum<seen)NET.pvpSeen.set(p.peer,cum);
-    else if(cum>seen){NET.pvpSeen.set(p.peer,cum);const d=Math.min(cum-seen,Math.max(400,DS.maxHp*0.3));if(b&&pvpOK(b)){P.pvpBy=p.peer;P.inv=Math.min(P.inv,0);hurtP(d,NET.pvpT.get(p.peer)||null);P.inv=Math.min(P.inv,12);P.pvpBy=null;}}}
+    else if(cum>seen){NET.pvpSeen.set(p.peer,cum);let d=Math.min(cum-seen,Math.max(400,DS.maxHp*0.3));{const now=performance.now(),R0=NET.pvpRate||(NET.pvpRate=new Map());let r=R0.get(p.peer);if(!r||now-r.t>1000){r={t:now,s:0};R0.set(p.peer,r);}d=Math.max(0,Math.min(d,Math.max(500,DS.maxHp*0.4)-r.s));r.s+=d;}if(b&&pvpOK(b)){P.pvpBy=p.peer;P.inv=Math.min(P.inv,0);hurtP(d,NET.pvpT.get(p.peer)||null);P.inv=Math.min(P.inv,12);P.pvpBy=null;}}}
   if(Array.isArray(q.dk)){const i=num(q.dk[0],0),killer=String(q.dk[1]||'');const seen=NET.dkSeen.get(p.peer)??0;
     if(i>seen){NET.dkSeen.set(p.peer,i);const kn=killer===NET.me?NET.name:(NET.known.get(killer)||'ผู้เล่น');
       chat('',`⚔️ ${kn} ปราบ ${nm} ในการประลอง`,true);if(killer===NET.me){S.pvpW=(S.pvpW||0)+1;S.gold+=5;banner('⚔️ ชนะการประลอง! +5 ทอง','#ff8a80');save();}}}}
@@ -2882,7 +2884,7 @@ if(!S.uid)S.uid=rid(12);if(!S.ck)S.ck=rid(16);
 const fmtCk=c=>String(c||'').toUpperCase().replace(/(.{4})(?=.)/g,'$1-');
 let cloudT=0,cloudBusy=false;
 function cloudSave(force){const db=window.FBDB;if(!db)return Promise.resolve(false);const now=Date.now();if(!force&&now-cloudT<45000)return Promise.resolve(false);cloudT=now;
-  return db.ref('saves/'+S.ck).set({d:JSON.stringify(S),t:firebase.database.ServerValue.TIMESTAMP,n:NET.name,lv:S.level}).then(()=>{S._cloudAt=Date.now();return true;}).catch(e=>{console.warn('cloud',e);return false;});}
+  if(!(accGet()||{}).k)return Promise.resolve(false);return db.ref('saves/'+S.ck).set({d:JSON.stringify(S),t:firebase.database.ServerValue.TIMESTAMP,n:NET.name,lv:S.level,k:accGet().k}).then(()=>{S._cloudAt=Date.now();return true;}).catch(e=>{console.warn('cloud',e);return false;});}
 const _saveLocal=save;
 save=function(){_saveLocal();cloudSave(false);};
 function cloudLoad(code){const db=window.FBDB;code=String(code||'').toLowerCase().replace(/[^a-z0-9]/g,'');if(!db){toast('ต้องเชื่อมต่อออนไลน์ก่อน');return;}if(code.length<16){toast('รหัสตัวละครต้องมี 16 ตัว');return;}
@@ -2911,7 +2913,7 @@ function mkAutoClaim(){for(const L of MK.list)if(L.s===S.uid&&(L.st==='sold'))mk
 function mkTx(id,fn,done){window.FBDB.ref('market/'+id).transaction(cur=>{if(cur===null)return;return fn(cur);},(err,ok,snap)=>done(!err&&ok,snap,err),false);}
 function mkBuy(L){if(MK.busy)return;if(L.s===S.uid){toast('ซื้อของตัวเองไม่ได้');return;}if(S.gold<L.p){toast('ทองไม่พอ');return;}
   if(L.it.k==='w'&&S.w[L.it.sub]&&S.w[L.it.sub].own&&S.w[L.it.sub].lv>=L.it.lv){toast('คุณมีอาวุธนี้อยู่แล้ว');return;}
-  MK.busy=true;mkTx(L.id,cur=>{if(cur.st!=='open')return;cur.st='sold';cur.b=NET.name;cur.bu=S.uid;cur.bt=firebase.database.ServerValue.TIMESTAMP;return cur;},ok=>{MK.busy=false;
+  MK.busy=true;mkTx(L.id,cur=>{if(cur.st!=='open')return;cur.st='sold';cur.b=NET.name;cur.bu=S.uid;cur.bk=myKey();cur.bt=firebase.database.ServerValue.TIMESTAMP;return cur;},ok=>{MK.busy=false;
     if(ok){S.gold-=L.p;giveItem(L.it);save();cloudSave(true);SFX.coin();toast('ซื้อสำเร็จ: '+itemName(L.it));}else toast('ซื้อไม่ทัน มีคนซื้อไปแล้ว');mkRender();});}
 const claiming=new Set();
 function mkClaim(L){if(claiming.has(L.id))return;claiming.add(L.id);mkTx(L.id,cur=>{if(cur.st!=='sold'||cur.s!==S.uid)return;cur.st='done';return cur;},ok=>{
@@ -2923,7 +2925,7 @@ function mkSell(){const sel=$('mkItem'),opts=sellables(),o=opts[+sel.value];if(!
   if(MK.list.filter(L=>L.s===S.uid&&L.st==='open').length>=10){toast('ฝากขายได้สูงสุด 10 รายการ');return;}
   const it=o.k==='arrow'?{k:'arrow',sub:o.sub,q}:o.k==='pot'?{k:'pot',q}:{k:'w',sub:o.sub,lv:o.lv};
   if(!takeItem(it)){toast('ของไม่พอ');return;}save();
-  const ref=window.FBDB.ref('market').push();ref.set({s:S.uid,sn:NET.name,it,p,t:firebase.database.ServerValue.TIMESTAMP,st:'open'}).then(()=>{toast('📦 ฝากขายแล้ว: '+itemName(it));cloudSave(true);MK.tab='mine';mkRender();})
+  const ref=window.FBDB.ref('market').push();ref.set({s:S.uid,sn:NET.name,it,p,t:firebase.database.ServerValue.TIMESTAMP,st:'open',k:myKey()}).then(()=>{toast('📦 ฝากขายแล้ว: '+itemName(it));cloudSave(true);MK.tab='mine';mkRender();})
     .catch(e=>{giveItem(it);save();toast('ฝากขายไม่ได้: '+(e&&e.message||e));});}
 function mkRender(){const P_=$('mkP');if(P_.classList.contains('hidden'))return;
   P_.querySelectorAll('.mkTabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===MK.tab));
@@ -3130,7 +3132,7 @@ sellables=()=>{const o=_sellables0();for(const g of[...S.inv].sort((a,b)=>b.r-a.
   const p=clamp(Math.floor(+$('mkPrice').value||0),1,9999999);if(!(+$('mkPrice').value>0)){toast('ใส่ราคาก่อน');return;}
   if(MK.list.filter(L=>L.s===S.uid&&L.st==='open').length>=10){toast('ฝากขายได้สูงสุด 10 รายการ');return;}
   const it={k:'g',g:o.g};if(!takeItem(it)){toast('ไม่พบไอเทม');return;}save();
-  const ref=window.FBDB.ref('market').push();ref.set({s:S.uid,sn:NET.name,it,p,t:firebase.database.ServerValue.TIMESTAMP,st:'open'}).then(()=>{toast('📦 ฝากขายแล้ว: '+itemName(it));cloudSave(true);MK.tab='mine';mkRender();})
+  const ref=window.FBDB.ref('market').push();ref.set({s:S.uid,sn:NET.name,it,p,t:firebase.database.ServerValue.TIMESTAMP,st:'open',k:myKey()}).then(()=>{toast('📦 ฝากขายแล้ว: '+itemName(it));cloudSave(true);MK.tab='mine';mkRender();})
     .catch(e=>{giveItem(it);save();toast('ฝากขายไม่ได้: '+(e&&e.message||e));});return;}a();};})();
 // ---------- UI wiring ----------
 (function(){const dock=$('dock');const b=document.createElement('button');b.id='dkBag';b.setAttribute('aria-label','กระเป๋าและชุดเกราะ');b.textContent='🎒';dock.insertBefore(b,dock.firstChild);
@@ -4121,19 +4123,26 @@ function mktGate(g){const gx=17.4,gz=9.5,stn=C('#9b958a'),dk=C('#6e695f'),tb=C('
 // ===== v11: player accounts (name + password) =====
 const ACC_K='mb_acct';
 function accGet(){try{const a=JSON.parse(localStorage.getItem(ACC_K)||'null');return a&&a.k?a:null;}catch(e){return null;}}
-async function accDB(){let t=0;while(!(window.firebase&&firebase.database)&&t<160){if(t===30&&typeof fbLoadScripts==='function')try{fbLoadScripts();}catch(e){}await new Promise(r=>setTimeout(r,150));t++;}
-  if(!(window.firebase&&firebase.database))throw new Error('เชื่อมต่ออินเทอร์เน็ตไม่ได้');if(!window._accApp)window._accApp=firebase.initializeApp(FB_CONFIG,'acct');return firebase.database(window._accApp);}
+async function accDB(){let t=0;while(!(window.firebase&&firebase.database&&firebase.auth)&&t<160){if(t===30&&typeof fbLoadScripts==='function')try{fbLoadScripts();}catch(e){}await new Promise(r=>setTimeout(r,150));t++;}
+  if(!(window.firebase&&firebase.database&&firebase.auth))throw new Error('เชื่อมต่ออินเทอร์เน็ตไม่ได้');const app=fbApp();const db=firebase.database(app);if(!window.FBDB)window.FBDB=db;return db;}
+function fbApp(){return (firebase.apps&&firebase.apps.length)?firebase.app():firebase.initializeApp(FB_CONFIG);}
 const _te=new TextEncoder(),_hx=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
 async function accKey(n){return _hx(await crypto.subtle.digest('SHA-256',_te.encode('mb-acc:'+n.trim().toLowerCase()))).slice(0,16);}
 const accPack=(n,o)=>({d:JSON.stringify(Object.assign({acc:1},o)),t:firebase.database.ServerValue.TIMESTAMP,n,lv:0});
 const accUnpack=v=>{if(!v||typeof v.d!=='string')return null;try{const o=JSON.parse(v.d);return o&&o.acc?Object.assign({n:v.n},o):'save';}catch(e){return null;}};
 async function accHash(pw,salt){const k=await crypto.subtle.importKey('raw',_te.encode(pw),'PBKDF2',false,['deriveBits']);return _hx(await crypto.subtle.deriveBits({name:'PBKDF2',salt:_te.encode('mb:'+salt),iterations:60000,hash:'SHA-256'},k,256));}
 function accSet(a){localStorage.setItem(ACC_K,JSON.stringify(a));try{localStorage.setItem('mb_net_name',a.n);}catch(e){}NET.name=a.n;}
+const accEmail=(k,g)=>k+(g?'.'+g:'')+'@moonblade.game',accFpw=pw=>'mb!'+pw;
+let AUTHU=null,AUTH_RDY=null;
+function authReady(){if(!AUTH_RDY)AUTH_RDY=(async()=>{await accDB();return await new Promise(r=>{let done=false;const un=firebase.auth().onAuthStateChanged(u=>{AUTHU=u;if(!done){done=true;r(u);}});setTimeout(()=>{if(!done){done=true;r(firebase.auth().currentUser);}},8000);});})();return AUTH_RDY;}
+async function authCheck(onLoad){try{await authReady();const u=firebase.auth().currentUser;const a=accGet();if(a&&u&&(!a.uid||a.uid===u.uid)){if(!a.uid)accSet(Object.assign(a,{uid:u.uid}));return true;}
+  if(a){try{localStorage.removeItem(ACC_K);}catch(e){}accTitle();accUI('login');const m=$('agMsg');if(m)m.textContent='🔒 อัปเดตระบบความปลอดภัยใหม่ กรุณาเข้าสู่ระบบอีกครั้ง (ตัวละครยังอยู่ครบ)';const nn=$('agN');if(nn)nn.value=a.n||'';}return false;}
+  catch(e){console.warn("auth",e);return true;}}
 function accUI(mode){let el=$('accGate');if(!el){el=document.createElement('div');el.id='accGate';document.body.appendChild(el);}
   const T={login:['🔐 เข้าสู่ระบบ','เข้าเกม'],reg:['✨ สมัครบัญชีใหม่','สมัครและเข้าเกม'],forgot:['🔑 ตั้งรหัสผ่านใหม่','ตั้งรหัสใหม่']}[mode];
   el.innerHTML=`<div class="agIn"><div class="agT">ตำนานดาบจันทรา</div><div class="agH">${T[0]}</div>
     <input id="agN" maxlength="16" placeholder="ชื่อผู้เล่น" autocomplete="username">
-    ${mode==='forgot'?'<input id="agC" maxlength="19" placeholder="รหัสตัวละคร 16 ตัว (ดูได้ในเมนูผู้เล่น)">':''}
+    ${mode==='forgot'?'<div class="agNote" style="color:#ffe0b2">ลืมรหัสผ่าน: ให้แอดมินกด "รีเซ็ตรหัส" ให้ก่อน แล้วตั้งรหัสใหม่ที่นี่ ตัวละครยังอยู่ครบ</div>':''}
     <input id="agP" type="password" maxlength="40" placeholder="${mode==='forgot'?'รหัสผ่านใหม่':'รหัสผ่าน'}" autocomplete="${mode==='login'?'current-password':'new-password'}">
     ${mode!=='login'?'<input id="agP2" type="password" maxlength="40" placeholder="ยืนยันรหัสผ่านอีกครั้ง" autocomplete="new-password">':''}
     <div id="agMsg"></div><button class="btn gold big" id="agGo">${T[1]}</button>
@@ -4142,32 +4151,39 @@ function accUI(mode){let el=$('accGate');if(!el){el=document.createElement('div'
   el.classList.remove('hidden');el.querySelectorAll('a[data-m]').forEach(a=>a.onclick=()=>accUI(a.dataset.m));
   const msg=t=>{$('agMsg').textContent=t;};const go=$('agGo');
   go.onclick=async()=>{const n=cleanTxt($('agN').value).trim().slice(0,16),pw=$('agP').value,p2=$('agP2')?$('agP2').value:pw;
-    if(n.length<2)return msg('ชื่อผู้เล่นต้องมีอย่างน้อย 2 ตัวอักษร');if(pw.length<4)return msg('รหัสผ่านต้องมีอย่างน้อย 4 ตัว');if(pw!==p2)return msg('รหัสผ่านทั้งสองช่องไม่ตรงกัน');
-    go.disabled=true;msg('กำลังเชื่อมต่อ...');
-    try{const db=await accDB(),key=await accKey(n),ref=db.ref('saves/'+key);const snap=await ref.once('value'),A0=snap.val(),A=accUnpack(A0);
-      if(A==='save'){go.disabled=false;return msg('ชื่อนี้ใช้ไม่ได้ ลองชื่ออื่น');}
-      if(mode==='reg'){if(A){go.disabled=false;return msg('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น');}
-        const salt=rid(12),h=await accHash(pw,salt);const r=await ref.transaction(c=>c?undefined:accPack(n,{s:salt,h,ck:S.ck}));
-        if(!r.committed){go.disabled=false;return msg('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น');}
-        S.acc=key;save();try{await cloudSave(true);}catch(e){}accSet({k:key,n,ck:S.ck});el.classList.add('hidden');accTitle();toast('✅ สมัครบัญชีสำเร็จ ยินดีต้อนรับ '+n);return;}
-      if(!A){go.disabled=false;return msg('ไม่พบชื่อผู้เล่นนี้');}
-      if(mode==='forgot'){const code=String($('agC').value||'').toLowerCase().replace(/[^a-z0-9]/g,'');if(code!==A.ck){go.disabled=false;return msg('รหัสตัวละครไม่ถูกต้อง');}
-        const salt=rid(12),h=await accHash(pw,salt);await ref.set(accPack(A.n||n,{s:salt,h,ck:A.ck}));msg('');go.disabled=false;accUI('login');$('agMsg').textContent='ตั้งรหัสผ่านใหม่แล้ว เข้าสู่ระบบได้เลย';$('agN').value=n;return;}
-      if(await accHash(pw,A.s)!==A.h){go.disabled=false;return msg('รหัสผ่านไม่ถูกต้อง');}
-      {const lr=await lockRef(key);const lv=(await lr.once('value')).val();if(lockBusy(lv)){go.disabled=false;return msg('บัญชีนี้กำลังมีคนเล่นอยู่ ล็อกอินได้เมื่ออีกเครื่องออกจากเกม');}}
-      accSet({k:key,n:A.n||n,ck:A.ck});
-      if(S.ck===A.ck){S.acc=key;save();el.classList.add('hidden');accTitle();toast('ยินดีต้อนรับกลับ '+(A.n||n));return;}
-      msg('กำลังโหลดตัวละคร...');const sv=(await db.ref('saves/'+A.ck).once('value')).val();
-      if(sv&&typeof sv.d==='string'){const j=JSON.parse(sv.d);j.ck=A.ck;j.acc=key;localStorage.setItem(SAVE_KEY,JSON.stringify(j));}
-      else{const j=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');j.ck=A.ck;j.acc=key;localStorage.setItem(SAVE_KEY,JSON.stringify(j));}
-      location.reload();}
-    catch(e){go.disabled=false;msg('เกิดข้อผิดพลาด: '+(e&&e.message||e)+(String(e).includes('PERMISSION')?' (ฐานข้อมูลไม่อนุญาต)':''));}};
+    if(n.length<2)return msg('ชื่อผู้เล่นต้องมีอย่างน้อย 2 ตัวอักษร');if(pw.length<(mode==='login'?4:6))return msg('รหัสผ่านต้องมีอย่างน้อย '+(mode==='login'?4:6)+' ตัว');if(pw!==p2)return msg('รหัสผ่านทั้งสองช่องไม่ตรงกัน');
+    go.disabled=true;msg('กำลังเชื่อมต่อ...');const fail=t=>{go.disabled=false;msg(t);};
+    try{const db=await accDB();const au=firebase.auth();await authReady();const key=await accKey(n);
+      let N=(await db.ref('names/'+key).once('value')).val();
+      const legacy=async()=>{try{return accUnpack((await db.ref('saves/'+key).once('value')).val());}catch(e){return null;}};
+      if(mode==='reg'){if(N)return fail('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น');const L=await legacy();if(L)return fail(L==='save'?'ชื่อนี้ใช้ไม่ได้ ลองชื่ออื่น':'ชื่อนี้มีคนใช้แล้ว (ถ้าเป็นบัญชีของคุณ ให้กด "เข้าสู่ระบบ")');
+        let cred;try{cred=await au.createUserWithEmailAndPassword(accEmail(key,0),accFpw(pw));}catch(e){if(e&&e.code==='auth/email-already-in-use')return fail('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น');throw e;}
+        let ck=S.ck;try{const v=(await db.ref('saves/'+ck).once('value')).val();if(v&&v.k&&v.k!==key)ck=rid(16);}catch(e){ck=rid(16);}
+        await db.ref('names/'+key).set({u:cred.user.uid,ck,g:0,n});AUTHU=cred.user;
+        S.ck=ck;S.acc=key;save();accSet({k:key,n,ck,uid:cred.user.uid});try{await cloudSave(true);}catch(e){}msg('✅ สมัครบัญชีสำเร็จ ยินดีต้อนรับ '+n);window.__reloading=1;location.reload();return;}
+      if(mode==='forgot'){if(!N)return fail('ไม่พบชื่อผู้เล่นนี้');if(N.rs!==true)return fail('ให้แอดมินกด "🔑 รีเซ็ตรหัส" ให้ชื่อนี้ก่อน แล้วกลับมาตั้งรหัสใหม่ที่นี่');
+        let cred;try{cred=await au.createUserWithEmailAndPassword(accEmail(key,N.g),accFpw(pw));}catch(e){if(e&&e.code==='auth/email-already-in-use')return fail('การรีเซ็ตนี้ถูกใช้ไปแล้ว ให้แอดมินกดรีเซ็ตใหม่');throw e;}
+        N={u:cred.user.uid,ck:N.ck,g:N.g|0,n:N.n||n};await db.ref('names/'+key).set(N);AUTHU=cred.user;}
+      else if(N){try{const c=await au.signInWithEmailAndPassword(accEmail(key,N.g),accFpw(pw));AUTHU=c.user;}catch(e){return fail(e&&e.code==='auth/too-many-requests'?'ลองผิดหลายครั้งเกินไป รอสักครู่แล้วลองใหม่':'ชื่อผู้เล่นหรือรหัสผ่านไม่ถูกต้อง');}}
+      else{const A=await legacy();if(!A||A==='save')return fail('ไม่พบชื่อผู้เล่นนี้');if(await accHash(pw,A.s)!==A.h)return fail('ชื่อผู้เล่นหรือรหัสผ่านไม่ถูกต้อง');
+        msg('กำลังย้ายบัญชีไปยังระบบที่ปลอดภัยกว่า...');let cred;
+        try{cred=await au.createUserWithEmailAndPassword(accEmail(key,0),accFpw(pw));}catch(e){if(e&&e.code==='auth/email-already-in-use'){try{cred=await au.signInWithEmailAndPassword(accEmail(key,0),accFpw(pw));}catch(e2){return fail('บัญชีนี้ถูกย้ายไปแล้ว ติดต่อแอดมินให้กดรีเซ็ตรหัส');}}else throw e;}
+        N={u:cred.user.uid,ck:A.ck,g:0,n:A.n||n};await db.ref('names/'+key).set(N);AUTHU=cred.user;
+        try{await db.ref('saves/'+key).set({d:'{"moved":1}',k:key,t:firebase.database.ServerValue.TIMESTAMP,n:N.n,lv:0});}catch(e){}}
+      {const lv=(await db.ref('locks/'+key).once('value')).val();if(lockBusy(lv))return fail('บัญชีนี้กำลังมีคนเล่นอยู่ ล็อกอินได้เมื่ออีกเครื่องออกจากเกม');}
+      accSet({k:key,n:N.n||n,ck:N.ck,uid:AUTHU.uid});
+      if(S.ck===N.ck){S.acc=key;save();msg('ยินดีต้อนรับกลับ '+(N.n||n));window.__reloading=1;location.reload();return;}
+      msg('กำลังโหลดตัวละคร...');let sv=null;try{sv=(await db.ref('saves/'+N.ck).once('value')).val();}catch(e){}
+      if(sv&&typeof sv.d==='string'){const j=JSON.parse(sv.d);j.ck=N.ck;j.acc=key;localStorage.setItem(SAVE_KEY,JSON.stringify(j));}
+      else{const j=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');j.ck=N.ck;j.acc=key;localStorage.setItem(SAVE_KEY,JSON.stringify(j));}
+      window.__reloading=1;location.reload();}
+    catch(e){const c=e&&e.code||'';fail(c==='auth/operation-not-allowed'||c==='auth/configuration-not-found'?'ระบบล็อกอินยังไม่เปิด (แอดมินต้องเปิด Email/Password ใน Firebase)':c==='auth/network-request-failed'?'เชื่อมต่ออินเทอร์เน็ตไม่ได้':'เกิดข้อผิดพลาด: '+(e&&e.message||e)+(String(e).includes('PERMISSION')||String(e).includes('ermission')?' (ฐานข้อมูลไม่อนุญาต)':''));}};
   el.querySelectorAll('input').forEach(i=>i.addEventListener('keydown',ev=>{if(ev.key==='Enter')go.click();}));}
 
 // --- one device at a time per account ---
 const SID=rid(10),LOCK_TTL=45000,LOCK={ref:null,iv:0,off:0,ok:false,on:0};
 async function lockRef(accK){const db=await accDB();if(!LOCK.on){LOCK.on=1;try{db.ref('.info/serverTimeOffset').on('value',x=>{LOCK.off=x.val()||0;});}catch(e){}}
-  return db.ref('saves/'+_hx(await crypto.subtle.digest('SHA-256',_te.encode('mb-lock:'+accK))).slice(0,16));}
+  return db.ref('locks/'+accK);}
 const lockNow=()=>Date.now()+(LOCK.off||0);
 function lockParse(v){if(!v||typeof v.d!=='string')return null;try{const o=JSON.parse(v.d);return o&&o.lock?o:null;}catch(e){return null;}}
 const lockBusy=v=>{const o=lockParse(v);return !!(o&&o.sid!==SID&&lockNow()-num(o.ts,0)<LOCK_TTL);};
@@ -4181,7 +4197,7 @@ async function lockRelease(){clearInterval(LOCK.iv);if(LOCK.ref&&LOCK.ok){try{aw
 {const _cs=cloudSave;cloudSave=function(f){if(window.__kicked)return Promise.resolve(false);return _cs(f);};}
 
 function accLogout(){askBox('ออกจากระบบ?','ตัวละครจะถูกเก็บไว้บนเซิร์ฟเวอร์ เข้าสู่ระบบใหม่เมื่อไหร่ก็เล่นต่อได้',async()=>{try{await cloudSave(true);}catch(e){}
-  await lockRelease();localStorage.removeItem(ACC_K);localStorage.removeItem(SAVE_KEY);location.reload();});}
+  await lockRelease();try{await firebase.auth().signOut();}catch(e){}localStorage.removeItem(ACC_K);localStorage.removeItem(SAVE_KEY);location.reload();});}
 function accTitle(){const a=accGet();let el=$('accBar');if(!el){el=document.createElement('div');el.id='accBar';const t=$('title');t.insertBefore(el,t.children[2]);}
   el.innerHTML=a?`👤 ${cleanTxt(a.n)} · <a id="accOut">ออกจากระบบ</a>`:'';const o=$('accOut');if(o)o.onclick=accLogout;
   $('startBtn').style.display=a?'':'none';$('newBtn').style.visibility=a?'':'hidden';}
@@ -4210,7 +4226,7 @@ body:has(#menu:not(.hidden)) #brBtn{display:none!important}
   const b=$('startBtn'),t0=b.textContent;b.textContent='กำลังตรวจสอบบัญชี...';
   lockClaim().then(ok=>{busy=false;b.textContent=t0;if(ok)_sg(f);else askBox('บัญชีนี้กำลังมีคนเล่นอยู่','มีเครื่องอื่นกำลังเล่นบัญชีนี้ เข้าได้เมื่ออีกเครื่องออกจากเกม (หรือรอประมาณ 1 นาทีหลังปิดเกม)',()=>{});})
    .catch(e=>{busy=false;b.textContent=t0;console.warn('lock',e);window.__noLock=1;_sg(f);});};}
-setTimeout(()=>{try{accTitle();if(!accGet())accUI((S.level>1||S.exp>0)?'reg':'login');}catch(e){console.warn(e);}},0);
+setTimeout(()=>{try{accTitle();if(!accGet())accUI((S.level>1||S.exp>0)?'reg':'login');else if(!window.__noLock)authCheck(true);}catch(e){console.warn(e);}},0);
 
 // ===================== v12: combat FX, living sword, town conquest, player-boss, moon royale =====================
 const isNightNow=()=>{const f=(gNow()%TOD_MS)/TOD_MS;return f<0.38||f>0.88;};
@@ -4296,16 +4312,17 @@ const WR={fallen:0,ft:0,rep:0,don:0,ok:false,ref:null,last:0},TOWN={hp:100,won:'
 const REPAIR_NEED=300,BEAUTY=[0,800,2000,4000,8000,15000];
 const W_BEAUTY=()=>{let t=0;for(let i=0;i<BEAUTY.length;i++)if(WR.don>=BEAUTY[i])t=i;return t;};
 const townOK=()=>!WR.fallen&&WR.rep>=REPAIR_NEED;
-const worldPack=o=>({d:JSON.stringify(Object.assign({world:1},o)),t:firebase.database.ServerValue.TIMESTAMP,n:'world',lv:0});
-function worldParse(v){if(!v||typeof v.d!=='string')return null;try{const o=JSON.parse(v.d);return o&&o.world?o:null;}catch(e){return null;}}
-async function worldRef(){if(WR.ref)return WR.ref;const db=await accDB();WR.ref=db.ref('saves/'+_hx(await crypto.subtle.digest('SHA-256',_te.encode('mb-world-v1'))).slice(0,16));return WR.ref;}
+const worldPack=o=>({fallen:o.fallen?1:0,rep:Math.max(0,Math.min(REPAIR_NEED,num(o.rep,0))),don:Math.max(0,num(o.don,0)),ft:num(o.ft,0),by:(accGet()||{}).k||'',t:firebase.database.ServerValue.TIMESTAMP});
+function worldParse(v){if(!v||typeof v!=='object')return null;if(typeof v.d==='string'){try{const o=JSON.parse(v.d);return o&&o.world?o:null;}catch(e){return null;}}return 'rep' in v?v:null;}
+async function worldRef(){if(WR.ref)return WR.ref;const db=await accDB();WR.ref=db.ref('world');return WR.ref;}
 function worldApply(o,announce){const was=WR.fallen,wasOk=townOK(),wasB=W_BEAUTY();o=o||{fallen:0,rep:REPAIR_NEED,don:0};WR.fallen=o.fallen?1:0;WR.ft=num(o.ft,0);WR.rep=num(o.rep,REPAIR_NEED);WR.don=num(o.don,0);WR.ok=true;
   if(!announce)return;
   if(WR.fallen&&!was)bigAlert('🔥','หมู่บ้านจันทร์เสี้ยวถูกยึดแล้ว!','ร้านค้าทุกร้านปิด · ร่วมกันบุกยึดเมืองคืนและปราบผู้คุมเมือง','#ff8a80',8000);
   else if(!WR.fallen&&was)bigAlert('🏳️','ยึดหมู่บ้านคืนได้แล้ว!','เมืองพังเสียหาย · บริจาคทองที่เมนู ☰ เพื่อซ่อมเมืองให้ร้านค้าเปิดอีกครั้ง','#7CFC8A',8000);
   else if(townOK()&&!wasOk&&!WR.fallen)bigAlert('🛠️','ซ่อมเมืองเสร็จแล้ว!','ร้านค้าทุกร้านกลับมาเปิดตามปกติ','#7CFC8A',6000);
   if(W_BEAUTY()>wasB)bigAlert('🌸','เมืองสวยขึ้นเป็นระดับ '+W_BEAUTY()+'!','ขอบคุณทุกคนที่ร่วมบริจาค · โบนัส EXP และทอง +'+(W_BEAUTY()*3)+'%','#ffd54f',6000);}
-async function worldPull(announce){try{const ref=await worldRef();const v=(await ref.once('value')).val();worldApply(worldParse(v),announce);}catch(e){if(!WR.ok){WR.ok=true;WR.rep=REPAIR_NEED;}}}
+async function worldPull(announce){try{const ref=await worldRef();let v=(await ref.once('value')).val();
+  if(!v&&!WR.migr){WR.migr=1;try{const db=await accDB();const old=worldParse((await db.ref('saves/'+_hx(await crypto.subtle.digest('SHA-256',_te.encode('mb-world-v1'))).slice(0,16)).once('value')).val());if(old){await worldTx(()=>old);v=(await ref.once('value')).val();}}catch(e){}}worldApply(worldParse(v),announce);}catch(e){if(!WR.ok){WR.ok=true;WR.rep=REPAIR_NEED;}}}
 async function worldTx(fn){try{const ref=await worldRef();const r=await ref.transaction(c=>{const o=worldParse(c)||{fallen:0,rep:REPAIR_NEED,don:0};const n=fn(o);return n?worldPack(n):undefined;});
   if(r&&r.committed)worldApply(worldParse(r.snapshot.val()),true);return r&&r.committed;}catch(e){console.warn('world',e);return false;}}
 function townFall(){if(WR.fallen)return;worldTx(o=>o.fallen?null:Object.assign(o,{fallen:1,ft:Date.now(),rep:0}));}
@@ -4485,70 +4502,82 @@ setInterval(()=>{try{if(typeof paused!=='undefined'&&paused)return;if(!$('title'
 setInterval(()=>{if(S.zone===0||!WR.ok)worldPull(WR.ok);},20000);setTimeout(()=>worldPull(false),2500);
 
 
-// ===================== v13: roster (who plays / online) + admin ban system =====================
-const ADMINS=['tan'];
+{const _sv=save;save=function(){if(window.__reloading)return;return _sv.apply(this,arguments);};}
+// ===================== v15: secure accounts (Firebase Auth) + roster + admin bans =====================
+const ADMINS=['tan'],ADMIN_KEY='6246fa914ff37bf4';
 const isAdminName=()=>{const a=accGet();return !!(a&&ADMINS.includes(String(a.n||'').trim().toLowerCase()));};
 const ADM_H='d4fae6f87fc089172a7954243f4cc3e994e71bf596689df2b723bc1260a06619';let ADM_OK=false;try{ADM_OK=sessionStorage.getItem('mb_admok')===ADM_H;}catch(e){}
 const isAdmin=()=>isAdminName()&&ADM_OK;
 async function admPin(pin){const k=await crypto.subtle.importKey('raw',_te.encode(String(pin||'').trim()),'PBKDF2',false,['deriveBits']);
   return _hx(await crypto.subtle.deriveBits({name:'PBKDF2',salt:_te.encode('mb-admin:tan'),iterations:200000,hash:'SHA-256'},k,256))===ADM_H;}
 function admUnlockCard(){return `<div class="card"><div class="t">🔐 ยืนยันรหัสแอดมิน</div><div class="d">ใส่รหัสแอดมินเพื่อเปิดระบบควบคุม</div>
-  <div class="row" style="gap:8px;margin-top:8px"><input id="admPinIn" type="password" inputmode="numeric" maxlength="12" placeholder="รหัสแอดมิน" style="flex:1;padding:8px;border-radius:8px;border:1px solid #8d6e63;background:#1b120c;color:#fff">
+  <div class="row" style="gap:8px;margin-top:8px"><input id="admPinIn" type="password" inputmode="numeric" maxlength="40" placeholder="รหัสแอดมิน" style="flex:1;padding:8px;border-radius:8px;border:1px solid #8d6e63;background:#1b120c;color:#fff">
   <button class="btn gold" data-a="admpin">ยืนยัน</button></div></div>`;}
-const ADM={ro:{},bans:{},at:0,busy:false,f:'all'};
+const ADM={ro:{},bans:{},names:{},legacy:true,at:0,busy:false,f:'all'};
 const hesc=t=>cleanTxt(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function docRef(tag){const db=await accDB();return db.ref('saves/'+_hx(await crypto.subtle.digest('SHA-256',_te.encode(tag))).slice(0,16));}
-const docParse=v=>{if(!v||typeof v.d!=='string')return null;try{return JSON.parse(v.d);}catch(e){return null;}};
-const docPack=(o,n)=>({d:JSON.stringify(o),t:firebase.database.ServerValue.TIMESTAMP,n:n||'sys',lv:0});
 const srvNow=()=>typeof lockNow==='function'?lockNow():Date.now();
-// --- roster heartbeat (every player) ---
-async function rosterBeat(first){const a=accGet();if(!a||window.__kicked)return;try{const ref=await docRef('mb-roster-v1');
-  await ref.transaction(c=>{const o=docParse(c)||{p:{}};o.p=o.p||{};const e=o.p[a.k]||{f:srvNow()};
-    Object.assign(e,{n:cleanTxt(a.n).slice(0,16),lv:S.level|0,z:S.zone|0,hb:srvNow(),br:BR&&BR.on?1:0,cl:S.cls||''});if(first)e.ln=(e.ln|0)+1;o.p[a.k]=e;return docPack(o,'roster');});}catch(e){console.warn('roster',e);}}
-// --- bans ---
-async function banGet(){try{const ref=await docRef('mb-ban-v1');return (docParse((await ref.once('value')).val())||{}).b||{};}catch(e){return null;}}
+const myKey=()=>(accGet()||{}).k||'';
+// --- roster heartbeat (each player writes only its own entry) ---
+async function rosterBeat(first){const k=myKey();if(!k||window.__kicked)return;try{const db=await accDB();
+  const wl=Math.max(0,...Object.values(S.w||{}).map(w=>w&&w.own?num(w.lv,0):0));
+  await db.ref('roster/'+k).transaction(e=>{e=e||{f:srvNow()};const now=srvNow();
+    if(first||!e.s0||now-e.s0>1800000){e.s0=now;e.lv0=S.level|0;e.g0=S.gold|0;}
+    Object.assign(e,{n:cleanTxt(accGet().n).slice(0,16),lv:S.level|0,z:S.zone|0,hb:now,br:BR&&BR.on?1:0,g:S.gold|0,wl});if(first)e.ln=(e.ln|0)+1;return e;});}catch(e){console.warn('roster',e);}}
+// --- bans (stored per account key, only admin can write — enforced by Firebase rules) ---
 const banActive=e=>!!(e&&(!e.u||e.u>srvNow()));
 function banText(e){return e.u?'ถึง '+new Date(e.u).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}):'ถาวร';}
-async function banSet(k,n,ms,why){const ref=await docRef('mb-ban-v1');const r=await ref.transaction(c=>{const o=docParse(c)||{b:{}};o.b=o.b||{};
-    if(ms===null)delete o.b[k];else o.b[k]={n:cleanTxt(n).slice(0,16),u:ms?srvNow()+ms:0,t:srvNow(),w:cleanTxt(why||'').slice(0,60),by:accGet().n};return docPack(o,'ban');});
-  return r&&r.committed;}
+async function banSet(k,n,ms,why){const db=await accDB();const ref=db.ref('bans/'+k);
+  if(ms===null){await ref.remove();return true;}
+  await ref.set({n:cleanTxt(n).slice(0,16),u:ms?srvNow()+ms:0,t:srvNow(),w:cleanTxt(why||'').slice(0,60),by:accGet().n});return true;}
 function banScreen(e){let el=$('banGate');if(!el){el=document.createElement('div');el.id='banGate';document.body.appendChild(el);}
   el.innerHTML=`<div class="agIn" style="border-color:#ff1744"><div class="agT">⛔ บัญชีนี้ถูกแบน</div><div class="agH">${hesc(accGet()?accGet().n:'')}</div>
    <div style="color:#ffcdd2;margin:8px 0">ระยะเวลา: ${banText(e)}${e.w?'<br>เหตุผล: '+hesc(e.w):''}</div><button class="btn" id="banOut">ออกจากระบบ</button></div>`;
-  $('banOut').onclick=()=>{try{localStorage.removeItem(ACC_K);localStorage.removeItem(SAVE_KEY);}catch(er){}location.reload();};}
-async function banCheck(){const a=accGet();if(!a||isAdminName())return false;const b=await banGet();const e=b&&b[a.k];if(!banActive(e))return false;
-  window.__kicked=1;try{await lockRelease();}catch(er){}paused=true;banScreen(e);return true;}
+  $('banOut').onclick=async()=>{try{await firebase.auth().signOut();}catch(er){}try{localStorage.removeItem(ACC_K);localStorage.removeItem(SAVE_KEY);}catch(er){}location.reload();};}
+async function banCheck(){const k=myKey();if(!k||isAdminName())return false;let e=null;try{const db=await accDB();e=(await db.ref('bans/'+k).once('value')).val();}catch(er){return false;}
+  if(!banActive(e))return false;window.__kicked=1;try{await lockRelease();}catch(er){}paused=true;banScreen(e);return true;}
 {const _sg=startGame;startGame=function(f){if(!accGet()||window.__banOK)return _sg(f);const b=$('startBtn'),t0=b.textContent;b.textContent='กำลังตรวจสอบบัญชี...';
-  banCheck().then(x=>{b.textContent=t0;if(!x){window.__banOK=1;_sg(f);}}).catch(()=>{b.textContent=t0;window.__banOK=1;_sg(f);});};}
+  (window.__noLock?Promise.resolve(true):authCheck()).then(ok=>{if(!ok){b.textContent=t0;return;}return banCheck().then(x=>{b.textContent=t0;if(!x){window.__banOK=1;_sg(f);}});})
+   .catch(()=>{b.textContent=t0;window.__banOK=1;_sg(f);});};}
 // --- admin panel ---
-async function admLoad(){if(ADM.busy)return;ADM.busy=true;try{const [r,b]=await Promise.all([docRef('mb-roster-v1').then(x=>x.once('value')),banGet()]);
-  ADM.ro=(docParse(r.val())||{}).p||{};ADM.bans=b||{};ADM.at=Date.now();}catch(e){toast('โหลดรายชื่อไม่ได้');}ADM.busy=false;
+async function admLoad(){if(ADM.busy)return;ADM.busy=true;try{const db=await accDB();const [r,b,c]=await Promise.all([db.ref('roster').once('value'),db.ref('bans').once('value'),db.ref('cfg').once('value')]);
+  ADM.ro=r.val()||{};ADM.bans=b.val()||{};ADM.legacy=((c.val()||{}).legacy)!==false;ADM.at=Date.now();}catch(e){toast('โหลดรายชื่อไม่ได้ (ต้องเป็นแอดมินตามกฎ Firebase)');}ADM.busy=false;
   if(menuTab==='admin'&&!$('menu').classList.contains('hidden'))renderMenu();}
 function agoTxt(t){const s=Math.max(0,(srvNow()-t)/1000|0);return s<90?'ออนไลน์':s<3600?(s/60|0)+' นาทีที่แล้ว':s<86400?(s/3600|0)+' ชม.ที่แล้ว':(s/86400|0)+' วันที่แล้ว';}
+function sus(x){const r=[];const mins=Math.max(1,(num(x.hb,0)-num(x.s0,0))/60000);
+  if(x.lv0!=null&&(x.lv-x.lv0)>Math.max(3,mins/4))r.push('เลเวลขึ้นเร็วผิดปกติ');if(x.g0!=null&&(x.g-x.g0)>Math.max(20000,mins*3000))r.push('ทองเพิ่มเร็วผิดปกติ');
+  if((x.g|0)>3000000)r.push('ทองเยอะผิดปกติ');if((x.lv|0)>60)r.push('เลเวลเกินปกติ');return r;}
 function admCard(){if(!isAdminName())return '<div class="card">ไม่มีสิทธิ์</div>';if(!ADM_OK)return admUnlockCard();if(!ADM.at)admLoad();
   const keys=new Set([...Object.keys(ADM.ro),...Object.keys(ADM.bans)]);const L=[...keys].map(k=>{const e=ADM.ro[k]||{n:(ADM.bans[k]||{}).n||'?',hb:0};return Object.assign({k,on:srvNow()-(e.hb||0)<100000,ban:ADM.bans[k]&&banActive(ADM.bans[k])?ADM.bans[k]:null},e);})
-    .sort((a,b)=>(b.on-a.on)||((b.hb||0)-(a.hb||0)));
-  const nOn=L.filter(x=>x.on).length,nBan=L.filter(x=>x.ban).length;
-  const Ls=L.filter(x=>ADM.f==='all'||(ADM.f==='on'&&x.on)||(ADM.f==='ban'&&x.ban));
+    .sort((a,b)=>(b.on-a.on)||((b.hb||0)-(a.hb||0)));L.forEach(x=>x.sus=sus(x));
+  const nOn=L.filter(x=>x.on).length,nBan=L.filter(x=>x.ban).length,nSus=L.filter(x=>x.sus.length).length;
+  const Ls=L.filter(x=>ADM.f==='all'||(ADM.f==='on'&&x.on)||(ADM.f==='ban'&&x.ban)||(ADM.f==='sus'&&x.sus.length));
   const fb=(k,t)=>`<button class="btn sm ${ADM.f===k?'gold':'alt'}" data-a="admf:${k}">${t}</button>`;
   return `<div class="card"><div class="row"><div class="grow"><div class="t">🛡️ ระบบแอดมิน · ผู้เล่นทั้งหมด ${L.length} คน</div>
-    <div class="d">🟢 ออนไลน์ตอนนี้ ${nOn} คน · ⛔ ถูกแบน ${nBan} คน · อัปเดต ${ADM.at?new Date(ADM.at).toLocaleTimeString('th-TH'):'...'}</div></div>
-    <button class="btn sm" data-a="admr">🔄 รีเฟรช</button></div><div class="row" style="gap:6px;margin-top:6px">${fb('all','ทั้งหมด')}${fb('on','🟢 ออนไลน์')}${fb('ban','⛔ ถูกแบน')}</div></div>
-   ${Ls.length?Ls.map(x=>`<div class="card" style="padding:8px 12px;${x.ban?'border-color:#ff5252':''}"><div class="row" style="flex-wrap:wrap;gap:6px">
-     <div class="grow"><div class="t">${x.on?'🟢':'⚪'} ${hesc(x.n)} <span style="color:#ffd54f">Lv.${x.lv|0}</span>${ADMINS.includes(String(x.n).toLowerCase())?' 👑':''}</div>
-     <div class="d">${x.hb?agoTxt(x.hb):'ยังไม่เคยออนไลน์'}${x.on&&ZONES[x.z]?' · '+ZONES[x.z].name:''}${x.br?' · กำลังเล่นศึกจันทรา':''} · เข้าเกม ${x.ln|0} ครั้ง · ID ${x.k}</div>
+    <div class="d">🟢 ออนไลน์ ${nOn} · ⛔ ถูกแบน ${nBan} · ⚠️ น่าสงสัย ${nSus} · อัปเดต ${ADM.at?new Date(ADM.at).toLocaleTimeString('th-TH'):'...'}</div></div>
+    <button class="btn sm" data-a="admr">🔄 รีเฟรช</button></div><div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">${fb('all','ทั้งหมด')}${fb('on','🟢 ออนไลน์')}${fb('sus','⚠️ น่าสงสัย')}${fb('ban','⛔ ถูกแบน')}</div></div>
+   ${Ls.length?Ls.map(x=>{const me=ADMINS.includes(String(x.n).toLowerCase());return `<div class="card" style="padding:8px 12px;${x.ban?'border-color:#ff5252':x.sus.length?'border-color:#ffb300':''}"><div class="row" style="flex-wrap:wrap;gap:6px">
+     <div class="grow"><div class="t">${x.on?'🟢':'⚪'} ${hesc(x.n)} <span style="color:#ffd54f">Lv.${x.lv|0}</span>${me?' 👑':''}</div>
+     <div class="d">${x.hb?agoTxt(x.hb):'ยังไม่เคยออนไลน์'}${x.on&&ZONES[x.z]?' · '+ZONES[x.z].name:''}${x.br?' · กำลังเล่นศึกจันทรา':''} · 💰${(x.g|0).toLocaleString()} · อาวุธ +${x.wl|0} · เข้าเกม ${x.ln|0} ครั้ง · ID ${x.k}</div>
+     ${x.sus.length?`<div class="d" style="color:#ffcc80">⚠️ ${x.sus.join(' · ')}</div>`:''}
      ${x.ban?`<div class="d" style="color:#ff8a80">⛔ แบน ${banText(x.ban)}${x.ban.w?' · '+hesc(x.ban.w):''}</div>`:''}</div>
-     ${ADMINS.includes(String(x.n).toLowerCase())?'':x.ban?`<button class="btn sm gold" data-a="unban:${x.k}">ปลดแบน</button>`:
-       `<button class="btn sm alt" data-a="ban:${x.k}|3600000">แบน 1 ชม.</button><button class="btn sm alt" data-a="ban:${x.k}|86400000">แบน 1 วัน</button><button class="btn sm" style="background:#b71c1c" data-a="ban:${x.k}|0">แบนถาวร</button>`}
-   </div></div>`).join(''):'<div class="card"><div class="d">ไม่มีรายชื่อ</div></div>'}
-   <div class="d" style="margin:4px 2px">ผู้ที่ถูกแบนจะถูกเด้งออกจากเกมภายใน 30 วินาที และเข้าเกมไม่ได้จนกว่าจะหมดเวลาหรือปลดแบน</div>`;}
+     ${me?'':(x.ban?`<button class="btn sm gold" data-a="unban:${x.k}">ปลดแบน</button>`:
+       `<button class="btn sm alt" data-a="ban:${x.k}|3600000">แบน 1 ชม.</button><button class="btn sm alt" data-a="ban:${x.k}|86400000">แบน 1 วัน</button><button class="btn sm" style="background:#b71c1c" data-a="ban:${x.k}|0">แบนถาวร</button>`)+`<button class="btn sm alt" data-a="rspw:${x.k}">🔑 รีเซ็ตรหัส</button>`}
+   </div></div>`;}).join(''):'<div class="card"><div class="d">ไม่มีรายชื่อ</div></div>'}
+   <div class="card"><div class="t">🔒 ระบบบัญชีแบบเก่า: ${ADM.legacy?'<span style="color:#ffcc80">ยังเปิดอยู่</span>':'<span style="color:#7CFC8A">ปิดแล้ว (ปลอดภัยสุด)</span>'}</div>
+    <div class="d">เปิดไว้ให้เพื่อนที่สมัครก่อนอัปเดตนี้ย้ายบัญชีมาระบบใหม่ (แค่ล็อกอิน 1 ครั้ง) · เมื่อทุกคนล็อกอินแล้วให้กดปิด เพื่อลบช่องโหว่ของระบบเก่าทั้งหมด</div>
+    <button class="btn sm ${ADM.legacy?'':'alt'}" data-a="legacy:${ADM.legacy?0:1}">${ADM.legacy?'🔒 ปิดระบบบัญชีเก่า':'เปิดระบบบัญชีเก่าอีกครั้ง'}</button></div>
+   <div class="d" style="margin:4px 2px">ผู้ที่ถูกแบนจะถูกเด้งออกภายใน 30 วินาที และฐานข้อมูลจะไม่รับข้อมูลจากบัญชีนั้นจนกว่าจะหมดเวลาหรือปลดแบน · "รีเซ็ตรหัส" ใช้เมื่อเพื่อนลืมรหัสผ่าน แล้วให้เพื่อนกด "ลืมรหัสผ่าน" ในหน้าเข้าเกม</div>`;}
 function admAct(a,v){if(a==='admpin'){if(!isAdminName())return;const el=$('admPinIn');const pin=el?el.value:'';
     admPin(pin).then(ok=>{if(ok){ADM_OK=true;try{sessionStorage.setItem('mb_admok',ADM_H);}catch(e){}toast('🛡️ เปิดระบบแอดมินแล้ว');ADM.at=0;renderMenu();}else{toast('❌ รหัสแอดมินไม่ถูกต้อง');if(el)el.value='';}});return;}
-  if(!isAdmin())return;
+  if(!isAdmin())return;const fail=e=>{toast('ไม่สำเร็จ: '+(e&&e.message||e));admLoad();};
   if(a==='admr'){admLoad();return;}if(a==='admf'){ADM.f=v;renderMenu();return;}
-  if(a==='ban'){const[k,ms]=v.split('|');const e=ADM.ro[k]||{};const why=prompt('เหตุผลที่แบน "'+cleanTxt(e.n||k)+'" (เว้นว่างได้)','')||'';if(why===null)return;
-    banSet(k,e.n||k,+ms,why).then(ok=>{toast(ok?'⛔ แบนแล้ว':'แบนไม่สำเร็จ');admLoad();});return;}
-  if(a==='unban'){banSet(v,'',null).then(ok=>{toast(ok?'✅ ปลดแบนแล้ว':'ไม่สำเร็จ');admLoad();});}}
+  if(a==='ban'){const[k,ms]=v.split('|');const e=ADM.ro[k]||{};const why=prompt('เหตุผลที่แบน "'+cleanTxt(e.n||k)+'" (เว้นว่างได้)','');if(why===null)return;
+    banSet(k,e.n||k,+ms,why).then(()=>{toast('⛔ แบนแล้ว');admLoad();}).catch(fail);return;}
+  if(a==='unban'){banSet(v,'',null).then(()=>{toast('✅ ปลดแบนแล้ว');admLoad();}).catch(fail);return;}
+  if(a==='rspw'){const e=ADM.ro[v]||{};askBox('รีเซ็ตรหัสผ่านของ "'+cleanTxt(e.n||v)+'"?','รหัสเดิมจะใช้ไม่ได้ทันที · บอกให้เพื่อนกด "ลืมรหัสผ่าน" ที่หน้าเข้าเกม แล้วตั้งรหัสใหม่ ตัวละครยังอยู่ครบ',async()=>{
+      try{const db=await accDB();const r=db.ref('names/'+v);const N=(await r.once('value')).val();if(!N){toast('ไม่พบบัญชีนี้ในระบบใหม่');return;}
+        await r.set(Object.assign({},N,{rs:true,g:(N.g|0)+1}));try{await db.ref('locks/'+v).remove();}catch(er){}toast('🔑 รีเซ็ตแล้ว ให้เพื่อนกด "ลืมรหัสผ่าน"');}catch(er){fail(er);}});return;}
+  if(a==='legacy'){accDB().then(db=>db.ref('cfg/legacy').set(v==='1')).then(()=>{toast(v==='1'?'เปิดระบบเก่าแล้ว':'🔒 ปิดระบบบัญชีเก่าแล้ว');admLoad();}).catch(fail);}}
 setInterval(()=>{if(started&&!window.__kicked){rosterBeat(false);banCheck();}if(menuTab==='admin'&&!$('menu').classList.contains('hidden'))admLoad();},30000);
 {const _sg2=startGame;startGame=function(f){const r=_sg2(f);setTimeout(()=>{if(started)rosterBeat(true);},2500);return r;};}
 setTimeout(()=>{const t=$('admTab');if(t)t.classList.toggle('hidden',!isAdminName());},0);
