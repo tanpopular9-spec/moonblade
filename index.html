@@ -393,7 +393,7 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
 </div>
 
 <script>
-const BUILD='v12';
+const BUILD='v13';
 (function(){try{fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/const BUILD='([^']+)'/);
   if(m&&m[1]!==BUILD&&sessionStorage.getItem('mbUpd')!==m[1]){sessionStorage.setItem('mbUpd',m[1]);location.replace(location.pathname+'?v='+m[1]);}}).catch(()=>{});}catch(e){}})();
 </script>
@@ -1759,7 +1759,7 @@ function render(){
   // transparent
   gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
   drawShadows();drawWarns();drawWaves();
-  for(const f of fx)drawFx(f);try{townDraw();brDraw();}catch(e){}
+  for(const f of fx)drawFx(f);try{townDraw();brDraw();evBoardDraw();}catch(e){}
   for(const p of projs)drawProjGlow(p);
   drawPortalGlow();if(Z.lava){const f=0.85+0.15*Math.sin(frame*0.08);for(const l of Z.lava){if(Math.abs(l.z-CAM.tz)>60)continue;push();T(l.x,0.07,l.z);SCL(l.r*0.98,1,l.r*0.98);draw(GEO.disc,C('#ff6a00'),0.9,f,0);pop();push();T(l.x,0.09,l.z);SCL(l.r*0.5,1,l.r*0.5);draw(GEO.disc,C('#ffd54f'),0.8,1,0);pop();}}
   gl.depthMask(true);
@@ -2765,7 +2765,7 @@ function drawWX(){if(!Z||Z.theme!=='forest'){WXP.length=0;return;}const wx=SEA.w
   oc.restore();}
 
 // ---------- world events (same schedule for everyone, by server time) ----------
-const EVS={invade:{n:'มอนสเตอร์บุกหมู่บ้าน',i:'⚔️',d:'ป้องกันหมู่บ้านจันทร์เสี้ยว! แม่ทัพอสูรจะบุกเข้ามาในนาทีที่ 4',zone:0},
+const EVS={invade:{n:'มอนสเตอร์บุกหมู่บ้าน',i:'⚔️',d:'ป้องกันหมู่บ้านจันทร์เสี้ยว! ระวังแม่ทัพอสูรที่จะตามมา',zone:0},
   gold:{n:'สไลม์ทองคำบุกป่า',i:'💰',d:'ล่าสไลม์ทองคำในป่า ดรอปทองมหาศาล',zone:0},
   blood:{n:'คืนจันทร์เลือด',i:'🩸',d:'EXP และทอง x2 แต่มอนสเตอร์ดุร้ายขึ้น',zone:-1}};
 const EV_SCHED=[[0,8,'invade'],[20,26,'gold'],[40,50,'blood']];
@@ -2780,7 +2780,7 @@ function evTick(){const t=gNow(),d=new Date(t),m=d.getUTCMinutes(),s=d.getUTCSec
   const key=k?k+Math.floor(t/3600e3):'';
   if(!k){let best=1e9,bk=null;for(const[a,,kk]of EV_SCHED){let dm=a-m;if(dm<=0)dm+=60;const sec=dm*60-s;if(sec<best){best=sec;bk=kk;}}EV.next=bk;EV.nextIn=best;}
   if(k!==EV.k){const prev=EV.k;EV.k=k;EV.key=key;
-    if(k&&(EVS[k].zone<0||S.zone===EVS[k].zone||EVS[k].zone===0)){const e=EVS[k];banner(`${e.i} อีเวนต์: ${e.n}`,'#ffb74d');chat('',`${e.i} ${e.n} — ${e.d}`+(EVS[k].zone===0&&S.zone!==0?' (ที่ป่าเงาจันทร์)':''),true);SFX.lvl();}
+    if(k&&(EVS[k].zone<0||S.zone===EVS[k].zone||EVS[k].zone===0)){const e=EVS[k];chat('',`${e.i} ${e.n} — ${e.d}`+(EVS[k].zone===0&&S.zone!==0?' (ที่ป่าเงาจันทร์)':''),true);SFX.lvl();}
     else if(prev){chat('','🏁 อีเวนต์ '+EVS[prev].n+' จบแล้ว',true);if(NET.host)for(const mm of mons)if(mm.ev&&!mm.dead){mm.dead=true;mm.deadT=0;}}}}
 function avgLv(){let s=S.level,n=1;for(const b of NET.rl){s+=b.lv||1;n++;}return s/n;}
 function evSpawn(){if(!NET.host||!Z||P.dead>0&&!others())return;
@@ -3978,18 +3978,22 @@ function chestShow(){if(!BCH.length||document.getElementById('bchest'))return;co
 .bcList{margin:6px 0 10px}.bcPop{opacity:0;animation:bcIn .35s ease-out forwards}@keyframes bcIn{from{opacity:0;transform:translateY(12px) scale(.9)}to{opacity:1;transform:none}}
 .bcI{background:rgba(20,12,4,.85);border:2px solid #8d6e63;border-radius:10px;padding:7px 10px;margin:5px 0;font-size:14px;font-weight:700}
 .bcOk{font-size:16px;padding:10px 26px}
-#bigAl{position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:8500;pointer-events:none;text-align:center;min-width:min(560px,92vw);padding:14px 22px;border-radius:18px;
-  background:linear-gradient(rgba(40,8,8,.92),rgba(20,4,4,.92));border:3px solid #ffb74d;box-shadow:0 0 0 4px rgba(255,183,77,.25),0 0 40px rgba(255,120,40,.7);animation:alIn .5s cubic-bezier(.2,1.6,.4,1),alPulse 1s .5s infinite}
-#bigAl .ai{font-size:44px;line-height:1}#bigAl .at{font-size:26px;font-weight:900;color:#ffd54f;text-shadow:0 0 12px #ff6d00}#bigAl .ad{font-size:14px;color:#ffe0b2;margin-top:4px}
-@keyframes alIn{from{transform:translateX(-50%) scale(.4);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+#bigAl{position:fixed;left:50%;top:112px;transform:translateX(-50%);z-index:8500;pointer-events:none;text-align:center;max-width:78vw;padding:4px 14px;border-radius:10px;
+  background:rgba(30,0,0,.45);animation:alIn .35s ease-out}
+#bigAl .ai{display:inline;font-size:16px;margin-right:6px}#bigAl .at{display:inline;font-size:15px;font-weight:800;color:#ffd54f;text-shadow:0 0 6px #000,0 0 10px #ff1744}#bigAl .ad{font-size:11px;color:#ffe0b2;opacity:.9;text-shadow:0 0 4px #000}
+#edgeAl{position:fixed;inset:0;z-index:8400;pointer-events:none;box-shadow:inset 0 0 70px 18px rgba(255,23,23,.75);animation:edgeP 1s ease-in-out infinite alternate}
+@keyframes edgeP{from{opacity:.35}to{opacity:1}}
+@keyframes alIn{from{transform:translateX(-50%) translateY(-10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 @keyframes alPulse{50%{box-shadow:0 0 0 8px rgba(255,183,77,.15),0 0 60px rgba(255,120,40,.95)}}`;document.head.appendChild(st);}
 function bigAlert(icon,title,desc,col,ms){let el=document.getElementById('bigAl');if(el)el.remove();el=document.createElement('div');el.id='bigAl';
+  let eg=document.getElementById('edgeAl');if(eg)eg.remove();eg=document.createElement('div');eg.id='edgeAl';document.body.appendChild(eg);
+  setTimeout(()=>{if(eg.parentNode){eg.style.transition='opacity .8s';eg.style.animation='none';eg.style.opacity=0;setTimeout(()=>eg.remove(),900);}},Math.min(ms||6000,4500));
   el.innerHTML=`<div class="ai">${icon}</div><div class="at" style="${col?'color:'+col:''}">${title}</div>${desc?`<div class="ad">${desc}</div>`:''}`;document.body.appendChild(el);
   setTimeout(()=>{if(el.parentNode){el.style.transition='opacity .6s';el.style.opacity=0;setTimeout(()=>el.remove(),700);}},ms||6000);if(navigator.vibrate)try{navigator.vibrate([120,80,120]);}catch(e){}}
 // event alerts (1 minute warning + big start alert + fanfare)
 {const _et=evTick;evTick=function(){const prev=EV.k;_et();
-  if(EV.k&&EV.k!==prev){const e=EVS[EV.k];bigAlert(e.i,'อีเวนต์พิเศษเริ่มแล้ว: '+e.n,e.d+(e.zone===0&&S.zone!==0?' (ที่ป่าเงาจันทร์)':''),null,7000);try{musFanfare(0);}catch(er){}}
-  if(!EV.k&&EV.next&&EV.nextIn<=60&&EV.nextIn>55){const key=EV.next+Math.floor(gNow()/3600e3);if(EV._w!==key){EV._w=key;const e=EVS[EV.next];bigAlert('⏰','อีก 1 นาที: '+e.n,e.d,'#80d8ff',5000);try{musFanfare(2);}catch(er){}}}};}
+  if(EV.k&&EV.k!==prev){const e=EVS[EV.k];bigAlert(e.i,'กิจกรรมเริ่มแล้ว: '+e.n,e.d+(e.zone===0&&S.zone!==0?' (ที่ป่าเงาจันทร์)':''),null,7000);try{musFanfare(0);}catch(er){}}
+};}
 // town-front field only during events
 {const _sp=spawnTick;spawnTick=function(){const r=ZONES[0].regions[0],on=!!EV.k;if(Z===ZONES[0]&&r.evOnly){r._max=r._max||r.max;r.max=on?r._max:0;
     if(!on)for(const m of mons)if(m.reg===0&&!m.dead&&!m.ev&&!m.mir&&Math.abs(m.z-P.z)>14){m.dead=true;m.deadT=0;}}return _sp();};}
@@ -4294,11 +4298,24 @@ async function townDonate(n){n=Math.floor(n);if(n<=0||S.gold<n){toast('ทอง
   S.gold-=n;save();const ok=await worldTx(o=>{if(o.fallen)return null;o.don=num(o.don,0)+n;o.rep=Math.min(REPAIR_NEED,num(o.rep,0)+n);return o;});
   if(ok){toast('🙏 บริจาค '+n+' ทอง ขอบคุณ!');soulAdd('holy',n/20);chat('','🏗️ '+NET.name+' บริจาค '+n+' ทองเพื่อบูรณะเมือง',true);}else{S.gold+=n;save();toast('บริจาคไม่สำเร็จ ลองใหม่อีกครั้ง');}renderMenuSafe();}
 function renderMenuSafe(){try{if(!$('menu').classList.contains('hidden'))toggleMenu(true);}catch(e){}}
-function worldInfo(){const ph=brPhase();return `<div class="card"><div class="t">📅 กิจกรรมประจำชั่วโมง</div>
-   <div class="d">⚔️ นาทีที่ 00–08 มอนสเตอร์บุกหมู่บ้าน — ป้องกันไม่ไหว เมืองจะถูกยึด!</div><div class="d">💰 นาทีที่ 20–26 สไลม์ทองคำบุกป่า</div>
-   <div class="d">😈 นาทีที่ 30–37 ราชาปีศาจจุติ — สุ่มผู้เล่น 1 คนกลายเป็นบอส (ต้องมี 2 คนขึ้นไปในป่า)</div><div class="d">🩸 นาทีที่ 40–50 คืนจันทร์เลือด</div>
-   <div class="d">🌕 ศึกจันทราล่มสลาย — สมัครนาทีที่ 12–15 และ 52–55 แข่ง 5 นาที (ต้องมี 2 คนขึ้นไป) · ชนะแล้ว ${S.brW||0} ครั้ง</div>
+function worldInfo(){const ph=brPhase();const a=evBoardList();return `<div class="card"><div class="t">📜 กิจกรรมตอนนี้</div>
+   ${a.length?a.map(x=>`<div class="d" style="color:#ff8a80;font-weight:700">${x}</div>`).join(''):'<div class="d">ยังไม่มีกิจกรรม — ดูป้ายกิจกรรมหน้าฐานได้ตลอด</div>'}
+   <div class="d">🏆 ชนะศึกจันทรา ${S.brW||0} ครั้ง</div>
    ${ph.ph==='reg'&&!BR.on?`<button class="btn gold" data-a="brjoin">${BR.reg===ph.key?'✅ ลงทะเบียนแล้ว (กดเพื่อยกเลิก)':'🌕 เข้าร่วมศึกจันทราล่มสลาย'}</button>`:''}</div>`;}
+// ---- event notice boards in front of every base ----
+function evBoardList(){const a=[];if(EV.k){const e=EVS[EV.k];a.push(e.i+' '+e.n);}
+  try{const ph=brPhase();if(ph.ph==='reg')a.push('🌕 ศึกจันทรา เปิดรับสมัคร');else if(ph.ph==='match')a.push('🌕 ศึกจันทรากำลังแข่ง');}catch(e){}
+  if(typeof WR!=='undefined'&&WR.fallen)a.push('🔥 หมู่บ้านจันทร์เสี้ยวถูกยึด!');return a;}
+function evBoardPos(){if(!Z||!Z.town||BR.on)return null;return[5.2,Z.town.z1+5];}
+function evBoardDraw(){if(SHMODE)return;const q=evBoardPos();if(!q)return;const[x,z]=q;if(Math.abs(CAM.tz-z)>70)return;const on=evBoardList().length>0;push();T(x,0,z);SCL(1.7);T(-x,0,-z);
+  for(const dx of[-0.85,0.85]){push();T(x+dx,0,z);SCL(0.14,2.3,0.14);T(0,0.5,0);draw(GEO.boxC,C('#4e342e'),1,0,0);pop();}
+  push();T(x,1.25,z);SCL(2.1,1.05,0.12);T(0,0.5,0);draw(GEO.boxC,C('#795548'),1,0,0);pop();
+  push();T(x,1.35,z-0.07);SCL(1.85,0.85,0.03);T(0,0.5,0);draw(GEO.boxC,C(on?'#3a0d0d':'#f1e3c6'),1,on?0.25:0,0);pop();
+  push();T(x,2.35,z);SCL(2.4,0.16,0.3);T(0,0.5,0);draw(GEO.boxC,C('#3e2723'),1,0,0);pop();
+  pop();if(on&&frame%6===0)part(x+rand(-1.7,1.7),rand(2.2,3.8),z-0.3,pick(['#ff1744','#ff6d00','#ffd54f']),1,0.02,30,0.18,0.01);}
+{const _dto=drawTownOverlay;drawTownOverlay=function(ds){_dto(ds);try{const q=evBoardPos();if(!q)return;const p=proj(q[0],4.7,q[1]);if(!p||p[2]>55)return;const s=ds(p[2]);
+  const a=evBoardList();otext('📜 ป้ายกิจกรรม',p[0],p[1],17*s,'#ffd54f',800);
+  if(!a.length)otext('ยังไม่มีกิจกรรม',p[0],p[1]+19*s,14*s,'#cfd8dc');else a.forEach((t,i)=>otext(t,p[0],p[1]+(20+i*18)*s,15*s,frame%40<28?'#ff5252':'#ffab91',800));}catch(e){}};}
 function townCard(){const b=W_BEAUTY();const st=WR.fallen?'🔥 ถูกมอนสเตอร์ยึดครอง — ร้านค้าปิด · ต้องปราบ "ผู้คุมเมือง" ที่ลานกลางเมือง':WR.rep<REPAIR_NEED?`🛠️ กำลังซ่อม ${WR.rep}/${REPAIR_NEED} ทอง — ร้านค้ายังปิด`:'🏰 ปลอดภัย ร้านค้าเปิดตามปกติ';
   const nx=BEAUTY[b+1];
   return `<div class="card"><div class="t">🏘️ หมู่บ้านจันทร์เสี้ยว</div><div class="d">${st}</div>
