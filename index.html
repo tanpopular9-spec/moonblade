@@ -382,6 +382,7 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
       <button class="tab" data-a="tab:stat">📈 อัพสกิล</button>
       <button class="tab" data-a="tab:weap">⚔️ อาวุธ</button>
       <button class="tab" data-a="tab:arrow">🏹 ธนู & ร้านค้า</button>
+      <button class="tab" data-a="tab:world">🌕 โลก</button>
       <button class="tab" data-a="tab:help">❓ วิธีเล่น</button>
       <span class="sp"></span>
       <span class="gold" id="mGold"></span>
@@ -392,7 +393,7 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
 </div>
 
 <script>
-const BUILD='v11.2';
+const BUILD='v12';
 (function(){try{fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/const BUILD='([^']+)'/);
   if(m&&m[1]!==BUILD&&sessionStorage.getItem('mbUpd')!==m[1]){sessionStorage.setItem('mbUpd',m[1]);location.replace(location.pathname+'?v='+m[1]);}}).catch(()=>{});}catch(e){}})();
 </script>
@@ -1115,7 +1116,7 @@ function dealDmg(m,amt,o){o=o||{};if(m.dead)return 0;
   m.hp-=dmg;m.flash=6;m.byP=true;if(m.d.boss)bcAdd(m,'d',dmg);
   if(o.kb){let nx=o.nx,nz=o.nz;if(nx===undefined){const d=hd(P,m)||1;nx=(m.x-P.x)/d;nz=(m.z-P.z)/d;}
     const k=o.kb*0.045*(m.d.boss?0.12:1);m.vx=nx*k;m.vz=nz*k;m.kbT=m.d.boss?4:10;if(o.kb>6&&!m.d.boss&&m.d.ai!=='fly'){m.vy=0.14;m.onG=false;}}
-  txt(m.x,m.y+m.h+0.3,m.z,dmg,crit?'#ffd54f':'#fff',crit);
+  txt(m.x,m.y+m.h+0.3,m.z,dmg,crit?'#ffd54f':'#fff',crit);try{fxHit(m,crit,dmg);}catch(e){}
   P.hitCombo++;P.comboTimer=150;questCombo();
   if(!P.ultS)P.ult=Math.min(100,P.ult+(o.ug===undefined?1.7:o.ug)*DS.ultGain);
   {const stl=DS.steal+(P.cb&&P.cb.k==='abyss'?0.1:0);if(stl)P.hp=Math.min(DS.maxHp,P.hp+dmg*stl*(m&&m.pvp?0.3:1));}
@@ -1196,7 +1197,7 @@ function doAttack(){
     if(c.lunge){P.vx=Math.sin(P.yaw)*c.lunge;P.vz=Math.cos(P.yaw)*c.lunge;}
     meleeHit(c.r,1.25,mult,c.kb||3,{shake:c.shake,stop:last?5:3});
     if(P.cb&&P.cb.k==='sword')projs.push({x:P.x,y:P.y+1,z:P.z,vx:Math.sin(P.yaw)*0.45,vy:0,vz:Math.cos(P.yaw)*0.45,r:1.2,pl:1,kind:'wave',base:pbase()*0.6,life:22,hit:new Set(),col:'#90caf9',yaw:P.yaw,ug:0.5});
-    fx.push({k:'slash',x:P.x,y:P.y+1.05,z:P.z,yaw:P.yaw,r:c.r*0.85,t:9,mt:9,step,col:W.col,tilt:last&&S.cur==='greatsword'?Math.PI/2:(step%2?0.35:-0.35)});
+    fx.push({k:'slash',x:P.x,y:P.y+1.05,z:P.z,yaw:P.yaw,r:c.r*0.85,t:9,mt:9,step,col:W.col,tilt:last&&S.cur==='greatsword'?Math.PI/2:(step%2?0.35:-0.35)});try{fxSwing(step,last);}catch(e){}
     SFX.slash();
   }else{
     const t=faceTarget(30,1.0);const a=aimAt(t);const ox=P.x+Math.sin(P.yaw)*0.6,oz=P.z+Math.cos(P.yaw)*0.6,oy=P.y+1.3;
@@ -1210,7 +1211,7 @@ function fireArrow(mult,pierce,spread,free,a){
   if(t!=='normal'&&!free){if(S.arrows[t]>0){if(Math.random()>=keep)S.arrows[t]--;}else{t='normal';S.arrowSel='normal';toast('ลูกธนูพิเศษหมด → ใช้ธนูธรรมดา');}}
   if(S.cls.cur==='celestial'&&!free&&(++P.arrowN)%5===0)t='holy';
   const A=ARROWS[t];a=a||aimAt(null);const c=Math.cos(spread),s=Math.sin(spread);const ax=a.x*c+a.z*s,az=-a.x*s+a.z*c;
-  projs.push({x:P.x+Math.sin(P.yaw)*0.5,y:P.y+1.35,z:P.z+Math.cos(P.yaw)*0.5,vx:ax*0.85,vy:a.y*0.85+0.02,vz:az*0.85,grav:0.003,r:0.3,pl:1,kind:'arrow',arrow:t,base:pbase()*mult*A.mult,pierce:pierce||t==='holy'||(P.cb&&P.cb.k==='archer'),life:75,hit:new Set(),col:A.col});}
+  projs.push({x:P.x+Math.sin(P.yaw)*0.5,y:P.y+1.35,z:P.z+Math.cos(P.yaw)*0.5,vx:ax*0.85,vy:a.y*0.85+0.02,vz:az*0.85,grav:0.003,r:0.3,pl:1,kind:'arrow',arrow:t,base:pbase()*mult*A.mult,pierce:pierce||t==='holy'||(P.cb&&P.cb.k==='archer'),life:75,hit:new Set(),col:A.col});try{fxShot(t);}catch(e){}}
 function doSkill(){
   const W=WEAPONS[S.cur];P.skillCd=W.skill.cd;S.st.skill++;
   switch(S.cur){
@@ -1453,7 +1454,7 @@ function updProjs(){
         else if(p.kind==='arrow'&&p.arrow==='bomb')explode(p.x,0.3,p.z,2.4,p.base*0.6,{ug:0.5});
         else part(p.x,0.1,p.z,'#aaaaaa',3,0.06,12,0.2);p.life=0;}
       if(p.kind==='shell'&&frame%2===0)part(p.x,p.y,p.z,'#9e9e9e',1,0.02,25,0.4,-0.002);
-      if(p.kind==='arrow'&&p.arrow!=='normal'&&frame%2===0)part(p.x,p.y,p.z,p.col,1,0.02,15,0.25,0);
+      if(p.kind==='arrow'&&frame%2===0)part(p.x,p.y,p.z,p.arrow==='normal'?'#fffde7':p.col,1,0.02,p.arrow==='normal'?10:15,p.arrow==='normal'?0.14:0.25,0);
     }else{
       if(P.dead<=0&&Math.hypot(p.x-P.x,p.z-P.z)<p.r+P.rad&&p.y>P.y-p.r&&p.y<P.y+1.8+p.r){hurtP(p.dmg,p.src);if(!p.persist)p.life=0;}
       if(p.life>0&&p.y<=0.05&&p.kind!=='root'){
@@ -1758,7 +1759,7 @@ function render(){
   // transparent
   gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
   drawShadows();drawWarns();drawWaves();
-  for(const f of fx)drawFx(f);
+  for(const f of fx)drawFx(f);try{townDraw();brDraw();}catch(e){}
   for(const p of projs)drawProjGlow(p);
   drawPortalGlow();if(Z.lava){const f=0.85+0.15*Math.sin(frame*0.08);for(const l of Z.lava){if(Math.abs(l.z-CAM.tz)>60)continue;push();T(l.x,0.07,l.z);SCL(l.r*0.98,1,l.r*0.98);draw(GEO.disc,C('#ff6a00'),0.9,f,0);pop();push();T(l.x,0.09,l.z);SCL(l.r*0.5,1,l.r*0.5);draw(GEO.disc,C('#ffd54f'),0.8,1,0);pop();}}
   gl.depthMask(true);
@@ -1939,6 +1940,7 @@ function renderMenu(){
         ${S.arrowSel===k?'<button class="btn sm alt" disabled>เลือกอยู่</button>':`<button class="btn sm" data-a="sela:${k}" ${k==='normal'||S.arrows[k]>0?'':'disabled'}>เลือกใช้</button>`}
         ${A.price?(lock?`<button class="btn sm alt" disabled>🔒 ปลดล็อก Lv.${A.need}</button>`:`<button class="btn sm gold" data-a="buya:${k}" ${S.gold>=A.price*10?'':'disabled'}>ซื้อ x10 💰${A.price*10}</button>`):''}</div></div>`;}
     h+='</div><div class="d" style="margin-top:8px">ลูกธนูทุกชนิดดรอปจากมอนสเตอร์ได้ · ธนูหายากดรอปน้อย · ธนูแสงสวรรค์ (ตำนาน) ได้จากบอสเป็นหลัก</div>';}
+  else if(menuTab==='world'){h=soulCard()+townCard()+worldInfo();}
   else{h+=`<div class="card"><div class="t">🎮 การควบคุม (3D)</div><table class="help">
       <tr><td>มือถือ</td><td>แตะค้างแล้วลากที่ครึ่งซ้ายล่างของจอ = จอยเดิน · ลากที่ว่างบนจอ = หมุนกล้อง/ก้มเงย · ⚔ โจมตี (แตะรัว = คอมโบ / กดค้าง = ตีต่อเนื่อง) · ⤒ กระโดด (กดซ้ำกลางอากาศ = กระโดดสองชั้น) · » แดช · ✦ สกิล · ☄ อันติ · 🧪 ยา · สลับอาวุธ · ➶ ลูกธนู</td></tr>
       <tr><td>คีย์บอร์ด</td><td>WASD เดิน · ลากเมาส์ หรือ ←/→/↑/↓ หมุนกล้อง · ลูกกลิ้งเมาส์ ซูม · Space กระโดด · J/Z โจมตี · K/Shift/X แดช · L/C สกิล · U/V อันติ · H ยา · Q/E สลับอาวุธ · 1–6 เลือกอาวุธ · R ลูกธนู · Esc/I เมนู</td></tr></table></div>
@@ -1968,7 +1970,7 @@ $('menu').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!
   case 'upw':{const c=upCost(S.w[v].lv);if(S.gold>=c&&S.w[v].lv<10){S.gold-=c;S.w[v].lv++;SFX.lvl();}break;}
   case 'buyp':{const n=+v,c=n===5?140:30;if(S.gold>=c){S.gold-=c;S.potions+=n;SFX.coin();}break;}
   case 'buya':{const A=ARROWS[v],c=A.price*10;if(S.gold>=c){S.gold-=c;S.arrows[v]+=10;SFX.coin();}break;}
-  case 'hudEd':toggleMenu(false);hudEdOpen();return;case 'style':S.style=S.style==='cute'?'real':'cute';rebuildEnv();break;case 'logout':toggleMenu(false);accLogout();return;case 'music':S.music=S.music===0?1:0;if(S.music===0)musStop();save();break;case 'kay':S.kay=S.kay===0?1:0;if(S.kay&&!KAY.ok)kayLoad();else rebuildEnv();break;case 'sela':S.arrowSel=v;break;case 'sound':S.sound=S.sound?0:1;break;
+  case 'hudEd':toggleMenu(false);hudEdOpen();return;case 'style':S.style=S.style==='cute'?'real':'cute';rebuildEnv();break;case 'logout':toggleMenu(false);accLogout();return;case 'donate':townDonate(+v);break;case 'brjoin':brJoin();break;case 'soulnm':{const n=prompt('ตั้งชื่อดาบของคุณ',soul().nm);if(n&&cleanTxt(n).trim()){soul().nm=cleanTxt(n).trim().slice(0,14);save();}}break;case 'music':S.music=S.music===0?1:0;if(S.music===0)musStop();save();break;case 'kay':S.kay=S.kay===0?1:0;if(S.kay&&!KAY.ok)kayLoad();else rebuildEnv();break;case 'sela':S.arrowSel=v;break;case 'sound':S.sound=S.sound?0:1;break;
   case 'reset':if(!resetArm){resetArm=true;break;}try{localStorage.removeItem(SAVE_KEY);}catch(_){}location.reload();return;}
   save();renderMenu();updHUD();});
 
@@ -2548,7 +2550,7 @@ function netStep(){
     b.lv=Math.round(num(q.lv,1));b.wk=WEAPONS[q.w]?q.w:'katana';
     const lk=Array.isArray(q.lk)?q.lk:[];b.body=HEX.test(lk[0])?lk[0]:'#6d4c41';b.hair=HEX.test(lk[1])?lk[1]:'#3e2723';b.cape=HEX.test(lk[2])?lk[2]:'#2e5e2e';b.head=HEADS.includes(lk[3])?lk[3]:(lk[3]===''?null:'cap');b.shield=!!lk[4];b.skin=HEX.test(lk[5])?lk[5]:null;b.pants=HEX.test(lk[6])?lk[6]:null;b.hs=HSOK.includes(lk[7])?lk[7]:null;b.g=lk[9]==='f'?'f':'m';b.eye=HEX.test(lk[10])?lk[10]:null;b.boot=HEX.test(lk[11])?lk[11]:null;b.neck=HEX.test(lk[12])?lk[12]:null;b.pauld=HEX.test(lk[13])?lk[13]:null;b.sc=clamp(num(lk[8],1),0.9,1.1);b.km=['Knight','Barbarian','Mage','Rogue','Rogue_Hooded'].includes(lk[14])?lk[14]:null;b.ag=lk[15]==='m'?'m':'f';b.pv=!!q.pv;b.pt=typeof q.pt==='string'?cleanTxt(q.pt).slice(0,8):null;if(Array.isArray(q.em)){const ei=num(q.em[0],0);if(b.emI===undefined)b.emI=ei;else if(ei>b.emI){b.emI=ei;const ek=String(q.em[1]);if(EMO[ek])b.em={k:ek,t:240};}}
     const a=Array.isArray(q.a)?q.a:[];b.ap=clamp(num(a[0],-1),-1,1);b.step=Math.round(clamp(num(a[1],0),0,8));b.fin=!!a[2];b.spin=num(a[3],0);b.run=!!a[4];b.air=!!a[5];
-    const h=Array.isArray(q.hp)?q.hp:[1,1];b.hp=Math.max(0,num(h[0],1));b.mhp=Math.max(1,num(h[1],1));b.dead=!!q.d;b.sh=!!q.sh;b.bc=Array.isArray(q.bc)?q.bc:null;b.hc=!!q.hc&&!q.ps;b.ps=!!q.ps;b.fresh=fresh(p);
+    const h=Array.isArray(q.hp)?q.hp:[1,1];b.hp=Math.max(0,num(h[0],1));b.mhp=Math.max(1,num(h[1],1));b.dead=!!q.d;b.sh=!!q.sh;b.bc=Array.isArray(q.bc)?q.bc:null;b.bm=typeof q.bm==='string'?q.bm:null;b.hc=!!q.hc&&!q.ps;b.ps=!!q.ps;b.fresh=fresh(p);
     // interpolate
     if(Math.hypot(b.tx-b.x,b.tz-b.z)>10){b.x=b.tx;b.z=b.tz;b.y=b.ty;}
     const ox=b.x,oz=b.z;b.x+=(b.tx-b.x)*0.3;b.y+=(b.ty-b.y)*0.3;b.z+=(b.tz-b.z)*0.3;b.yaw=lerpAng(b.yaw,b.tyaw,0.3);b.vx=b.x-ox;b.vz=b.z-oz;b.anim++;b.onG=!b.air;if(b.flash>0)b.flash--;
@@ -4189,6 +4191,267 @@ function accTitle(){const a=accGet();let el=$('accBar');if(!el){el=document.crea
   lockClaim().then(ok=>{busy=false;b.textContent=t0;if(ok)_sg(f);else askBox('บัญชีนี้กำลังมีคนเล่นอยู่','มีเครื่องอื่นกำลังเล่นบัญชีนี้ เข้าได้เมื่ออีกเครื่องออกจากเกม (หรือรอประมาณ 1 นาทีหลังปิดเกม)',()=>{});})
    .catch(e=>{busy=false;b.textContent=t0;console.warn('lock',e);window.__noLock=1;_sg(f);});};}
 setTimeout(()=>{try{accTitle();if(!accGet())accUI((S.level>1||S.exp>0)?'reg':'login');}catch(e){console.warn(e);}},0);
+
+// ===================== v12: combat FX, living sword, town conquest, player-boss, moon royale =====================
+const isNightNow=()=>{const f=(gNow()%TOD_MS)/TOD_MS;return f<0.38||f>0.88;};
+const shash=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;};
+function srand(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+const BLADES=new Set(['katana','dagger','greatsword']);
+
+// ---------------- 1) combat FX ----------------
+{const _df=drawFx;drawFx=function(f){const a=f.t/f.mt;
+  switch(f.k){
+  case 'trail':{for(let i=0;i<4;i++){const k=i/4;push();T(f.x,f.y,f.z);RY(f.yaw+(f.step%2?1:-1)*(k*0.55-(1-a)*0.6));RZ(f.tilt||0);SCL(f.r*(1.12-k*0.1));
+      draw(GEO.sector,C(i===0?'#ffffff':f.col),a*(0.75-k*0.16),1,0);pop();}break;}
+  case 'spark':{const n=f.n||8,L=(f.r||0.9)*(0.35+(1-a)*0.9);for(let i=0;i<n;i++){const an=i/n*6.283+f.seed,el=Math.sin(i*2.3+f.seed)*0.6;
+      const dx=Math.cos(an)*Math.cos(el),dy=Math.sin(el),dz=Math.sin(an)*Math.cos(el);segLine(f.x+dx*L*0.35,f.y+dy*L*0.35,f.z+dz*L*0.35,f.x+dx*L,f.y+dy*L,f.z+dz*L,f.w||0.05,i%2?f.col:'#ffffff',a);}
+    push();T(f.x,f.y,f.z);SCL((f.r||0.9)*0.35*(0.4+a));draw(GEO.sphL,C('#ffffff'),a*0.9,1,0);pop();break;}
+  case 'shock':{push();T(f.x,0.06,f.z);SCL(f.r*(0.3+(1-a)*0.9));draw(GEO.ring,C(f.col),a,1,0);pop();
+    for(let i=0;i<7;i++){const an=i/7*6.283+f.seed,L=f.r*(0.5+0.5*Math.sin(i*1.7+f.seed));segLine(f.x,0.05,f.z,f.x+Math.cos(an)*L*(1.1-a*0.4),0.05,f.z+Math.sin(an)*L*(1.1-a*0.4),0.06,'#3a2a1a',Math.min(1,a*1.6));}break;}
+  case 'flash':{push();T(f.x,f.y,f.z);SCL(f.r*(1.4-a*0.6));draw(GEO.sphL,C(f.col),a*0.55,1,0);pop();break;}
+  default:_df(f);}};}
+function fxSwing(step,last){const W=WEAPONS[S.cur];if(!W)return;const big=S.cur==='greatsword';
+  fx.push({k:'trail',x:P.x,y:P.y+1.05,z:P.z,yaw:P.yaw,r:(big?2.5:1.8)*(last?1.25:1),t:10,mt:10,step,col:soulCol()||W.col,tilt:last&&big?Math.PI/2:(step%2?0.4:-0.4)});
+  if(P.onG&&P.dashT<=0&&!P.dead){const f=last?0.11:0.05;P.vx+=Math.sin(P.yaw)*f;P.vz+=Math.cos(P.yaw)*f;}
+  if(last){fx.push({k:'shock',x:P.x+Math.sin(P.yaw)*1.6,z:P.z+Math.cos(P.yaw)*1.6,r:big?3.2:2.2,col:'#ffe082',t:22,mt:22,seed:Math.random()*6});
+    part(P.x+Math.sin(P.yaw)*1.6,0.2,P.z+Math.cos(P.yaw)*1.6,'#c8b48c',16,0.12,30,0.35,0.004);shake(big?0.35:0.18);}
+  const sc=soulCol();if(sc)part(P.x+Math.sin(P.yaw)*0.9,P.y+1.1,P.z+Math.cos(P.yaw)*0.9,sc,6,0.08,18,0.18,0);}
+function fxHit(m,crit,dmg){if(!m||m.dead&&m.deadT<=0)return;const y=m.y+m.h*0.55,col=crit?'#ffd54f':(soulCol()||'#ffffff');
+  fx.push({k:'spark',x:m.x,y,z:m.z,r:crit?1.5:0.9,n:crit?12:7,col,t:crit?12:8,mt:crit?12:8,seed:Math.random()*6,w:crit?0.07:0.045});
+  if(crit){fx.push({k:'flash',x:m.x,y,z:m.z,r:1.3,col:'#fff3c4',t:8,mt:8});hitstop=Math.max(hitstop||0,4);shake(0.25);}
+  else hitstop=Math.max(hitstop||0,1);}
+function fxShot(t){const A=ARROWS[t]||{col:'#ffffff'},hx=P.x+Math.sin(P.yaw)*0.6,hz=P.z+Math.cos(P.yaw)*0.6;
+  fx.push({k:'ring',x:hx,y:P.y+1.35,z:hz,r:0.25,grow:0.9,col:A.col||'#ffffff',t:10,mt:10,up:true});
+  fx.push({k:'flash',x:hx,y:P.y+1.35,z:hz,r:0.45,col:A.col||'#ffffff',t:7,mt:7});
+  if(P.onG&&P.dashT<=0){P.vx-=Math.sin(P.yaw)*0.03;P.vz-=Math.cos(P.yaw)*0.03;}}
+
+// ---------------- 2) living sword ----------------
+const SOUL_PATH={blood:{n:'ดาบโลหิต',i:'🩸',c:'#ff1744',d:'คริติคอล +2% และดูดเลือด +0.8% ต่อเลเวลดาบ'},holy:{n:'ดาบศักดิ์สิทธิ์',i:'✨',c:'#ffe57f',d:'ป้องกัน +2.5% และฟื้นเลือด +0.4/วิ ต่อเลเวลดาบ'},
+  shadow:{n:'ดาบเงา',i:'🌑',c:'#b388ff',d:'ความแรงคริติคอล +10% และความเร็ว +2% ต่อเลเวลดาบ'},moon:{n:'ดาบจันทรา',i:'🌙',c:'#80d8ff',d:'พลังโจมตี +3% ต่อเลเวลดาบ (กลางคืน x2)'}};
+const SOUL_LV=[0,40,150,450,1200];
+const SOUL_LINES={
+ awake:{none:['...ข้าตื่นแล้ว เจ้าคือผู้ถือข้าคนใหม่สินะ','เสียงข้าได้ยินใช่ไหม? ข้าคือวิญญาณในดาบเล่มนี้']},
+ streak:{none:['ฮึ! ไม่เลวนี่','ต่อไป! ข้ายังไม่อิ่ม'],blood:['เลือด! เลือดอีก!','ฮ่าฮ่า! ใครก็ได้มาเป็นเหยื่อรายต่อไป!'],holy:['เราปกป้องผู้คนได้อีกหลายชีวิต','แสงสว่างนำทางเรา'],shadow:['เงียบเหมือนเงา... ตายโดยไม่รู้ตัว','เร็วกว่านี้ได้อีก'],moon:['แสงจันทร์อยู่ข้างเรา','คมดาบสะท้อนแสงจันทร์สวยดี']},
+ lowhp:{none:['เฮ้! อย่าเพิ่งตายนะ ดื่มยาเร็ว!','ถอยก่อน! เลือดเจ้าใกล้หมดแล้ว'],blood:['ยังไม่จบ! สู้ต่อ!'],holy:['ข้าจะปกป้องเจ้า ถอยไปตั้งหลักก่อน'],shadow:['หลบไปในเงาก่อน!'],moon:['พักใต้แสงจันทร์สักครู่เถอะ']},
+ boss:{none:['รู้สึกได้ไหม... พลังมหาศาลอยู่ใกล้ ๆ','บอส! ตั้งสติให้ดี'],blood:['ในที่สุดก็เจอเหยื่อที่คู่ควร!'],holy:['ความชั่วร้ายอยู่ตรงหน้า เราต้องหยุดมัน'],shadow:['หามุมอับให้ดี แล้วแทงจากด้านหลัง'],moon:['แม้แต่บอสก็ต้องก้มหัวให้แสงจันทร์']},
+ idle:{none:['เงียบจัง... ไม่ไปล่าอะไรหน่อยเหรอ','ข้าเบื่อแล้วนะ','เจ้ารู้ไหม ดาบที่ไม่ได้ใช้จะขึ้นสนิมนะ'],blood:['ข้ากระหายแล้ว...'],holy:['วันนี้ช่วยใครได้บ้างหรือยัง?'],shadow:['ข้าชอบความเงียบแบบนี้'],moon:['รอให้ถึงคืนเดือนเต็มสิ']},
+ night:{none:['กลางคืนมาแล้ว ระวังตัวด้วย'],moon:['คืนนี้ข้าแข็งแกร่งเป็นสองเท่า!'],shadow:['ความมืดคือบ้านของเรา'],blood:['ราตรีนี้จะเปื้อนเลือด'],holy:['แม้มืดมิด แสงในใจยังสว่าง']},
+ death:{none:['...ข้ายังอยู่ ลุกขึ้นมาใหม่เถอะ','ครั้งหน้าเราจะชนะ']},
+ pvp:{none:['ชนะแล้ว! เห็นไหมว่าเราแข็งแกร่ง'],blood:['อีกหนึ่งคนที่พ่ายแพ้ต่อเรา!'],holy:['ชนะอย่างมีเกียรติ']},
+ lvl:{none:['ข้ารู้สึกแข็งแกร่งขึ้น!','พลังของข้ากำลังตื่น...']},
+ path:{blood:['ข้าเลือกเส้นทางแห่งโลหิตแล้ว... ข้าคือดาบโลหิต!'],holy:['แสงศักดิ์สิทธิ์ไหลผ่านตัวข้า... ข้าคือดาบศักดิ์สิทธิ์!'],shadow:['ข้าหลอมรวมกับเงา... ข้าคือดาบเงา!'],moon:['แสงจันทร์โอบกอดข้า... ข้าคือดาบจันทรา!']}};
+function soul(){if(!S.soul)S.soul={p:{blood:0,holy:0,shadow:0,moon:0},lv:1,path:null,nm:'ดาบจันทรา',aw:0};return S.soul;}
+function soulXp(){const p=soul().p;return p.blood+p.holy+p.shadow+p.moon;}
+function soulOn(){return S.level>=5&&soul().aw;}
+function soulCol(){if(!soulOn()||!soul().path)return null;return SOUL_PATH[soul().path].c;}
+const SOULT={say:null,t:0,cd:0,kills:[],idle:0,night:null,dodge:null,pvpW:null,bossSeen:-1,lowCd:0};
+function soulSay(trig,force){if(!soulOn())return;if(SOULT.cd>0&&!force)return;const L=SOUL_LINES[trig];if(!L)return;const p=soul().path;const arr=(p&&L[p])||L.none;if(!arr)return;
+  const s=pick(arr);SOULT.say=s;SOULT.t=270;SOULT.cd=force?400:1500;chat('🗡️ '+cleanTxt(soul().nm),s);}
+function soulAdd(k,v){if(!soulOn()||BR.on)return;const so=soul();so.p[k]=(so.p[k]||0)+v;const xp=soulXp();let lv=1;for(let i=0;i<SOUL_LV.length;i++)if(xp>=SOUL_LV[i])lv=i+1;
+  if(lv>so.lv){so.lv=lv;bigAlert('🗡️',cleanTxt(so.nm)+' เลเวล '+lv+'!',so.path?SOUL_PATH[so.path].n:'วิญญาณในดาบแข็งแกร่งขึ้น',soulCol()||'#ffd54f',4500);part(P.x,P.y+1.2,P.z,soulCol()||'#ffd54f',40,0.25,50,0.3);soulSay('lvl',true);recalcKeep();}
+  if(so.lv>=2){let best=null,bv=-1;for(const q in so.p)if(so.p[q]>bv){bv=so.p[q];best=q;}
+    if(!so.path||(best!==so.path&&bv>so.p[so.path]*1.3)){const first=!so.path;so.path=best;bigAlert(SOUL_PATH[best].i,(first?'ดาบตื่นรู้: ':'ดาบเปลี่ยนแปลง: ')+SOUL_PATH[best].n,SOUL_PATH[best].d,SOUL_PATH[best].c,6000);soulSay('path',true);recalcKeep();}}}
+{const _rc=recalc;recalc=function(){_rc();if(!soulOn()||!soul().path||BR.on)return;const so=soul(),k=(so.lv-1)*(BLADES.has(S.cur)?1:0.5);
+  switch(so.path){case 'blood':DS.crit+=0.02*k;DS.steal=(DS.steal||0)+0.008*k;break;case 'holy':DS.defPct=Math.min(0.75,DS.defPct+0.025*k);DS.regen+=0.4*k;break;
+  case 'shadow':DS.critM+=0.1*k;DS.spd*=1+0.02*k;break;case 'moon':DS.atk*=1+0.03*k*(isNightNow()?2:1);break;}};}
+function soulTick(){if(S.level>=5&&!soul().aw){soul().aw=1;bigAlert('🗡️','ดาบของคุณตื่นขึ้นแล้ว!','วิญญาณในดาบจะเติบโตตามวิธีเล่นของคุณ ดูได้ในเมนู ☰',null,7000);setTimeout(()=>soulSay('awake',true),1200);save();}
+  if(!soulOn())return;if(SOULT.cd>0)SOULT.cd-=30;if(SOULT.t>0)SOULT.t-=30;if(SOULT.lowCd>0)SOULT.lowCd-=30;
+  const d=S.st.dodges||0;if(SOULT.dodge===null)SOULT.dodge=d;if(d>SOULT.dodge){soulAdd('shadow',(d-SOULT.dodge)*1.5);SOULT.dodge=d;}
+  const pw=S.pvpW||0;if(SOULT.pvpW===null)SOULT.pvpW=pw;if(pw>SOULT.pvpW){soulAdd('blood',(pw-SOULT.pvpW)*10);SOULT.pvpW=pw;soulSay('pvp',true);}
+  if(P.dead<=0&&P.hp<DS.maxHp*0.25&&SOULT.lowCd<=0){SOULT.lowCd=3600;soulSay('lowhp',true);}
+  const B=curMainBoss();if(B&&SOULT.bossSeen!==B.id){SOULT.bossSeen=B.id;soulSay('boss',true);}
+  const nt=isNightNow();if(SOULT.night===null)SOULT.night=nt;else if(nt&&!SOULT.night)soulSay('night',true);SOULT.night=nt;
+  SOULT.idle+=30;if(SOULT.idle>60*120){SOULT.idle=0;soulSay('idle');}
+  if(frame%90===0&&soul().path&&soul().lv>=2&&P.dead<=0&&!BR.on){const c=soulCol();part(P.x+Math.sin(P.yaw)*0.5,P.y+1.0,P.z+Math.cos(P.yaw)*0.5,c,2+soul().lv,0.03,40,0.16,-0.002);}}
+function soulCard(){if(S.level<5)return `<div class="card"><div class="t">🗡️ ดาบมีชีวิต</div><div class="d">ถึงเลเวล 5 แล้ววิญญาณในดาบของคุณจะตื่นขึ้น</div></div>`;
+  const so=soul(),xp=soulXp(),nx=SOUL_LV[so.lv]||null,P0=SOUL_PATH[so.path]||null;
+  const bar=(k,n,c)=>{const v=Math.round(so.p[k]||0),mx=Math.max(1,...Object.values(so.p));return `<div class="d" style="display:flex;align-items:center;gap:6px"><span style="width:84px">${n}</span><span style="flex:1;height:8px;background:#2a1d12;border-radius:5px;overflow:hidden"><i style="display:block;height:100%;width:${Math.round(v/mx*100)}%;background:${c}"></i></span><span style="width:40px;text-align:right">${v}</span></div>`;};
+  return `<div class="card"><div class="row"><div class="grow"><div class="t">🗡️ ${cleanTxt(so.nm)} · เลเวล ${so.lv}/5</div><div class="d">${P0?P0.i+' '+P0.n+' — '+P0.d:'ยังไม่เลือกเส้นทาง (เลือกเองตามวิธีเล่นเมื่อถึงเลเวล 2)'}</div>
+   <div class="d">พลังวิญญาณ ${Math.round(xp)}${nx?' / '+nx:' (สูงสุด)'} · ใช้ได้เต็มที่กับคาตานะ มีดสั้น ดาบใหญ่ (อาวุธอื่นได้ครึ่งเดียว)</div></div><button class="btn sm alt" data-a="soulnm">ตั้งชื่อดาบ</button></div>
+   ${bar('blood','🩸 โลหิต','#ff1744')}${bar('holy','✨ ศักดิ์สิทธิ์','#ffe57f')}${bar('shadow','🌑 เงา','#b388ff')}${bar('moon','🌙 จันทรา','#80d8ff')}
+   <div class="d" style="margin-top:4px">ฆ่ามอน = โลหิต · รับดาเมจแทน/ช่วยปาร์ตี้/ตีบอส = ศักดิ์สิทธิ์ · หลบหลีก/สู้ตอนเลือดน้อย = เงา · ล่ากลางคืน/อีเวนต์ = จันทรา</div></div>`;}
+
+// ---------------- 3) town conquest + rebuild ----------------
+const WR={fallen:0,ft:0,rep:0,don:0,ok:false,ref:null,last:0},TOWN={hp:100,won:'',fail:''};
+const REPAIR_NEED=300,BEAUTY=[0,800,2000,4000,8000,15000];
+const W_BEAUTY=()=>{let t=0;for(let i=0;i<BEAUTY.length;i++)if(WR.don>=BEAUTY[i])t=i;return t;};
+const townOK=()=>!WR.fallen&&WR.rep>=REPAIR_NEED;
+const worldPack=o=>({d:JSON.stringify(Object.assign({world:1},o)),t:firebase.database.ServerValue.TIMESTAMP,n:'world',lv:0});
+function worldParse(v){if(!v||typeof v.d!=='string')return null;try{const o=JSON.parse(v.d);return o&&o.world?o:null;}catch(e){return null;}}
+async function worldRef(){if(WR.ref)return WR.ref;const db=await accDB();WR.ref=db.ref('saves/'+_hx(await crypto.subtle.digest('SHA-256',_te.encode('mb-world-v1'))).slice(0,16));return WR.ref;}
+function worldApply(o,announce){const was=WR.fallen,wasOk=townOK(),wasB=W_BEAUTY();o=o||{fallen:0,rep:REPAIR_NEED,don:0};WR.fallen=o.fallen?1:0;WR.ft=num(o.ft,0);WR.rep=num(o.rep,REPAIR_NEED);WR.don=num(o.don,0);WR.ok=true;
+  if(!announce)return;
+  if(WR.fallen&&!was)bigAlert('🔥','หมู่บ้านจันทร์เสี้ยวถูกยึดแล้ว!','ร้านค้าทุกร้านปิด · ร่วมกันบุกยึดเมืองคืนและปราบผู้คุมเมือง','#ff8a80',8000);
+  else if(!WR.fallen&&was)bigAlert('🏳️','ยึดหมู่บ้านคืนได้แล้ว!','เมืองพังเสียหาย · บริจาคทองที่เมนู ☰ เพื่อซ่อมเมืองให้ร้านค้าเปิดอีกครั้ง','#7CFC8A',8000);
+  else if(townOK()&&!wasOk&&!WR.fallen)bigAlert('🛠️','ซ่อมเมืองเสร็จแล้ว!','ร้านค้าทุกร้านกลับมาเปิดตามปกติ','#7CFC8A',6000);
+  if(W_BEAUTY()>wasB)bigAlert('🌸','เมืองสวยขึ้นเป็นระดับ '+W_BEAUTY()+'!','ขอบคุณทุกคนที่ร่วมบริจาค · โบนัส EXP และทอง +'+(W_BEAUTY()*3)+'%','#ffd54f',6000);}
+async function worldPull(announce){try{const ref=await worldRef();const v=(await ref.once('value')).val();worldApply(worldParse(v),announce);}catch(e){if(!WR.ok){WR.ok=true;WR.rep=REPAIR_NEED;}}}
+async function worldTx(fn){try{const ref=await worldRef();const r=await ref.transaction(c=>{const o=worldParse(c)||{fallen:0,rep:REPAIR_NEED,don:0};const n=fn(o);return n?worldPack(n):undefined;});
+  if(r&&r.committed)worldApply(worldParse(r.snapshot.val()),true);return r&&r.committed;}catch(e){console.warn('world',e);return false;}}
+function townFall(){if(WR.fallen)return;worldTx(o=>o.fallen?null:Object.assign(o,{fallen:1,ft:Date.now(),rep:0}));}
+function townLiberate(){worldTx(o=>o.fallen?Object.assign(o,{fallen:0,rep:0}):null);}
+async function townDonate(n){n=Math.floor(n);if(n<=0||S.gold<n){toast('ทองไม่พอ');return;}if(WR.fallen){toast('ต้องยึดเมืองคืนก่อนถึงจะบริจาคได้');return;}
+  S.gold-=n;save();const ok=await worldTx(o=>{if(o.fallen)return null;o.don=num(o.don,0)+n;o.rep=Math.min(REPAIR_NEED,num(o.rep,0)+n);return o;});
+  if(ok){toast('🙏 บริจาค '+n+' ทอง ขอบคุณ!');soulAdd('holy',n/20);chat('','🏗️ '+NET.name+' บริจาค '+n+' ทองเพื่อบูรณะเมือง',true);}else{S.gold+=n;save();toast('บริจาคไม่สำเร็จ ลองใหม่อีกครั้ง');}renderMenuSafe();}
+function renderMenuSafe(){try{if(!$('menu').classList.contains('hidden'))toggleMenu(true);}catch(e){}}
+function worldInfo(){const ph=brPhase();return `<div class="card"><div class="t">📅 กิจกรรมประจำชั่วโมง</div>
+   <div class="d">⚔️ นาทีที่ 00–08 มอนสเตอร์บุกหมู่บ้าน — ป้องกันไม่ไหว เมืองจะถูกยึด!</div><div class="d">💰 นาทีที่ 20–26 สไลม์ทองคำบุกป่า</div>
+   <div class="d">😈 นาทีที่ 30–37 ราชาปีศาจจุติ — สุ่มผู้เล่น 1 คนกลายเป็นบอส (ต้องมี 2 คนขึ้นไปในป่า)</div><div class="d">🩸 นาทีที่ 40–50 คืนจันทร์เลือด</div>
+   <div class="d">🌕 ศึกจันทราล่มสลาย — สมัครนาทีที่ 12–15 และ 52–55 แข่ง 5 นาที (ต้องมี 2 คนขึ้นไป) · ชนะแล้ว ${S.brW||0} ครั้ง</div>
+   ${ph.ph==='reg'&&!BR.on?`<button class="btn gold" data-a="brjoin">${BR.reg===ph.key?'✅ ลงทะเบียนแล้ว (กดเพื่อยกเลิก)':'🌕 เข้าร่วมศึกจันทราล่มสลาย'}</button>`:''}</div>`;}
+function townCard(){const b=W_BEAUTY();const st=WR.fallen?'🔥 ถูกมอนสเตอร์ยึดครอง — ร้านค้าปิด · ต้องปราบ "ผู้คุมเมือง" ที่ลานกลางเมือง':WR.rep<REPAIR_NEED?`🛠️ กำลังซ่อม ${WR.rep}/${REPAIR_NEED} ทอง — ร้านค้ายังปิด`:'🏰 ปลอดภัย ร้านค้าเปิดตามปกติ';
+  const nx=BEAUTY[b+1];
+  return `<div class="card"><div class="t">🏘️ หมู่บ้านจันทร์เสี้ยว</div><div class="d">${st}</div>
+   <div class="d">ความสวยของเมือง ระดับ ${b}/5 · ยอดบริจาครวม ${WR.don.toLocaleString()} ทอง${nx?' (ระดับถัดไป '+nx.toLocaleString()+')':''} · โบนัส EXP/ทอง +${b*3}%</div>
+   <div class="row" style="flex-wrap:wrap">${[10,50,200,1000].map(n=>`<button class="btn sm ${WR.fallen?'alt':'gold'}" data-a="donate:${n}" ${WR.fallen||S.gold<n?'disabled':''}>บริจาค ${n}</button>`).join('')}</div></div>`;}
+{const _ge=gainExp;gainExp=function(n){return _ge(n*(1+W_BEAUTY()*0.03));};}
+{const _it=inTown;inTown=function(e){if(WR.fallen&&S.zone===0)return false;if(BR.on)return false;return _it(e);};}
+{const _os=openShop;openShop=function(k,n){if(S.zone===0&&!townOK()){toast(WR.fallen?'🔥 ร้านปิด — เมืองถูกยึดครอง':'🛠️ ร้านปิดชั่วคราว — เมืองกำลังซ่อม ช่วยบริจาคได้ที่เมนู ☰');return;}return _os(k,n);};}
+{const _mo=mkOpen;mkOpen=function(){if(S.zone===0&&!townOK()){toast(WR.fallen?'🔥 ตลาดปิด — เมืองถูกยึดครอง':'🛠️ ตลาดปิดชั่วคราว — เมืองกำลังซ่อม');return;}return _mo();};}
+{const _eb=evBossDown;evBossDown=function(m){TOWN.won=EV.key;return _eb(m);};}
+{const _es=evSpawn;evSpawn=function(){_es();if(!NET.host||S.zone!==0||!Z||BR.on)return;
+  if(WR.fallen){const occ=mons.filter(m=>m.ev==='occ'&&!m.dead);const lv=Math.max(4,Math.min(16,Math.round(avgLv())+1));
+    if(occ.filter(m=>m.t!=='warlord').length<8){const t=pick(['wolf','skeleton','mushroom','wolf','archer']);const m=spawnMon(t,rand(-14,14),rand(-20,30),lv,-1);m.ev='occ';m.R={a:-26,b:33};}
+    if(!occ.some(m=>m.t==='warlord')&&Date.now()-(WR.occAt||0)>10000){WR.occAt=Date.now();const m=spawnMon('warlord',0,6,Math.max(8,lv),-1);m.ev='occ';m.occBoss=1;m.d=Object.assign({},m.d,{name:'ผู้คุมเมือง'});m.R={a:-20,b:30};}}};}
+{const _km=killMon;killMon=function(m){const r=_km(m);try{if(m.ev==='occ'&&m.t==='warlord'&&WR.fallen)townLiberate();
+    if(m.byP&&!m.pvp){soulAdd('blood',1);if(isNightNow()||EV.k)soulAdd('moon',isNightNow()?1:0.5);if(NET.pt&&NET.rl.some(b=>b.pt===NET.pt&&hd(b,m)<30))soulAdd('holy',0.6);if(P.hp<DS.maxHp*0.3)soulAdd('shadow',1);
+      SOULT.idle=0;SOULT.kills.push(frame);SOULT.kills=SOULT.kills.filter(f=>frame-f<720);if(SOULT.kills.length>=6){SOULT.kills=[];soulSay('streak');}}}catch(e){console.warn(e);}return r;};}
+function townTick(){if(S.zone!==0||BR.on)return;
+  if(evOn('invade')&&!WR.fallen&&TOWN.won!==EV.key){if(TOWN.key!==EV.key){TOWN.key=EV.key;TOWN.hp=100;TOWN.pres=0;}TOWN.pres+=0.5;
+    let dmg=0;for(const m of mons){if(m.dead||m.ev!=='invade')continue;if(Math.hypot(m.x,m.z-5)<16)dmg+=m.t==='warlord'?0.8:0.15;}TOWN.hp=Math.max(0,TOWN.hp-dmg);
+    if(TOWN.hp<=0&&NET.host&&TOWN.fail!==EV.key){TOWN.fail=EV.key;townFall();}}
+  if(TOWN.prevK==='invade'&&EV.k!=='invade'&&TOWN.won!==TOWN.key&&NET.host&&!WR.fallen&&TOWN.fail!==TOWN.key&&TOWN.key&&TOWN.pres>=120){TOWN.fail=TOWN.key;townFall();}
+  TOWN.prevK=EV.k;}
+function townBar(){let el=$('townBar');const show=S.zone===0&&!BR.on&&evOn('invade')&&!WR.fallen&&TOWN.won!==EV.key;
+  if(!show){if(el)el.remove();return;}if(!el){el=document.createElement('div');el.id='townBar';document.body.appendChild(el);}
+  el.innerHTML=`🏰 กำแพงหมู่บ้าน <b>${Math.ceil(TOWN.hp)}%</b><i style="width:${TOWN.hp}%"></i>`;}
+function townDraw(){if(S.zone!==0||!Z||BR.on||SHMODE)return;if(Math.abs(CAM.tz)>80)return;
+  if(WR.fallen||WR.rep<REPAIR_NEED){const F=[[-9,14],[8,20],[-14,-6],[12,-12],[3,-20],[-4,26],[15,4]];const n=WR.fallen?F.length:3;
+    for(let i=0;i<n;i++){const[x,z]=F[i];if(frame%3===0)part(x+rand(-0.6,0.6),0.4,z+rand(-0.6,0.6),WR.fallen?pick(['#ff6d00','#ffab00','#ff3d00']):'#9e9e9e',1,0.03,40,WR.fallen?0.35:0.5,-0.006);
+      if(frame%5===0)part(x,1.5,z,'#3e3e3e',1,0.02,80,0.6,-0.004);push();T(x,0,z);draw(GEO.boxC,C('#3b2a1a'),1,0,0);pop();}
+    if(WR.fallen)for(const[x,z]of[[-6,4],[6,4]]){push();T(x,0,z);SCL(0.12,4,0.12);T(0,0.5,0);draw(GEO.boxC,C('#2b2b2b'),1,0,0);pop();push();T(x+0.5,3.2,z);SCL(1,1.4,0.05);T(0,0.5,0);draw(GEO.boxC,C('#7f0000'),1,0,0);pop();}}
+  const b=townOK()?W_BEAUTY():0;if(!b)return;
+  if(b>=1)for(let i=0;i<10;i++){const a=i/10*6.283;push();T(Math.cos(a)*7.5,0,4+Math.sin(a)*7.5);SCL(0.7,0.35,0.7);T(0,0.5,0);draw(GEO.boxC,C('#6d4c41'),1,0,0);pop();push();T(Math.cos(a)*7.5,0.45,4+Math.sin(a)*7.5);SCL(0.3);draw(GEO.sphL,C(['#ec407a','#ffee58','#ab47bc','#ff7043'][i%4]),1,0,0);pop();}
+  if(b>=2)for(let i=0;i<8;i++){const a=i/8*6.283+0.2;const x=Math.cos(a)*11,z=4+Math.sin(a)*11;push();T(x,0,z);SCL(0.1,3,0.1);T(0,0.5,0);draw(GEO.boxC,C('#3e2723'),1,0,0);pop();push();T(x,3.1,z);SCL(0.28);draw(GEO.sphL,C('#fff1b0'),1,1,0);pop();}
+  if(b>=3){push();T(0,0,-3.5);SCL(1.6,0.8,1.6);T(0,0.5,0);draw(GEO.boxC,C('#9e9e9e'),1,0,0);pop();push();T(0,0.8,-3.5);SCL(0.45,2.2,0.45);T(0,0.5,0);draw(GEO.boxC,C('#ffca28'),1,0.3,0);pop();push();T(0,3.3,-3.5);SCL(0.55);draw(GEO.sphL,C('#ffd54f'),1,0.4,0);pop();}
+  if(b>=4&&isNightNow()&&frame%40===0){const x=rand(-15,15),z=rand(-15,25);part(x,rand(14,20),z,pick(['#ff5252','#ffd740','#69f0ae','#40c4ff','#e040fb']),30,0.25,55,0.3,0.004);}
+  if(b>=5){push();T(-6,0,-12);SCL(0.5,6,0.5);T(0,0.5,0);draw(GEO.boxC,C('#cfd8dc'),1,0,0);pop();push();T(-6,6.6,-12);SCL(0.9);draw(GEO.sphL,C('#e1f5fe'),1,0.8,0);pop();}}
+
+// ---------------- 4) player becomes the boss ----------------
+EVS.possess={n:'ราชาปีศาจจุติ',i:'😈',d:'ผู้เล่นหนึ่งคนจะถูกราชาปีศาจสิง! ทุกคนช่วยกันล้มให้ได้ก่อนหมดเวลา',zone:0};
+EV_SCHED.push([30,37,'possess']);
+const BM={me:false,key:'',n0:0,dmg:{},done:{},novaT:0,end:'',bossPeer:null};
+function bmHunters(){return NET.rl.filter(b=>!b.dead&&(b.lv||1)>=3&&!b.bm);}
+function bmTick(){const on=evOn('possess')&&!BR.on;
+  if(!on){if(BM.me)bmEnd('time');BM.bossPeer=null;return;}
+  const key=EV.key;const boss=NET.rl.find(b=>b.bm===key);BM.bossPeer=boss&&!boss.dead?boss.peer:null;
+  if(!BM.me&&!boss&&BM.end!==key&&!Object.keys(BM.done).includes(key)&&!(BM.ghost===key)&&P.dead<=0&&S.level>=3&&!inTown(P)&&EV.el>5){
+    const cand=[{peer:NET.me||'me',lv:S.level}].concat(NET.rl.filter(b=>!b.dead&&(b.lv||1)>=3&&!inTown(b)));
+    if(cand.length>=2){let best=null,bh=1e18;for(const c of cand){const h=shash(String(c.peer)+key);if(h<bh){bh=h;best=c;}}
+      if(best&&(best.peer===(NET.me||'me')))bmStart(key,cand.length-1);}}
+  if(BM.me&&boss&&boss.peer!==NET.me&&shash(String(boss.peer)+key)<shash(String(NET.me)+key))bmEnd('yield');
+  if(BM.me){BM.novaT--;if(BM.novaT<=0&&P.dead<=0){BM.novaT=600;bmNova();}}
+  // reward hunters when the boss player falls
+  if(boss&&boss.dead&&!BM.done[key]&&(BM.dmg[key]||0)>0){BM.done[key]=1;bmReward(boss,key);}}
+function bmStart(key,n){BM.me=true;BM.key=key;BM.n0=Math.max(1,n);BM.novaT=420;recalc();P.hp=DS.maxHp;
+  bigAlert('😈','คุณถูกราชาปีศาจสิง!','อยู่รอดให้ได้จนหมดเวลา · ร่างอสูรตีแรงขึ้นและปล่อยคลื่นเพลิงอัตโนมัติ','#ff5252',8000);try{musFanfare(0);}catch(e){}
+  part(P.x,P.y+1.5,P.z,'#ff1744',60,0.3,60,0.4);fx.push({k:'shock',x:P.x,z:P.z,r:5,col:'#ff1744',t:30,mt:30,seed:1});chat('','😈 '+NET.name+' ถูกราชาปีศาจสิงร่าง!',true);}
+function bmEnd(why){if(!BM.me)return;const key=BM.key;BM.me=false;BM.end=key;recalc();P.hp=Math.min(P.hp,DS.maxHp);
+  if(why==='time'&&P.dead<=0){const lv=S.level;BCH.push({boss:'ราชาปีศาจ (ร่างของคุณ)',t:'bm',rank:1,N:1,dmg:0,tank:0,items:[{k:'g',g:mkGear(lv,3)},{k:'g',g:mkGear(lv,2.5)}],gold:Math.round(400*ECON.gold*(1+lv*0.1)),exp:Math.round(80+lv*40),arrows:{thunder:10,bomb:10,holy:3},pots:5,mref:null});
+    bigAlert('👑','คุณรอดชีวิตในร่างราชาปีศาจ!','ได้รับกล่องรางวัลผู้รอดชีวิต','#ffd54f',6000);setTimeout(chestShow,1500);chat('','👑 '+NET.name+' ในร่างราชาปีศาจรอดชีวิตจนจบ!',true);}
+  else if(why==='dead'){BM.ghost=key;BM.ghostT=Date.now();chat('','💀 ร่างราชาปีศาจของ '+NET.name+' ถูกปราบแล้ว!',true);}}
+function bmNova(){const r=7.5;fx.push({k:'shock',x:P.x,z:P.z,r,col:'#ff3d00',t:28,mt:28,seed:Math.random()*6});fx.push({k:'ring',x:P.x,y:0.1,z:P.z,r:1,grow:r,col:'#ff6d00',t:24,mt:24});
+  part(P.x,P.y+1,P.z,'#ff6d00',50,0.35,40,0.4);shake(0.4);for(const m of mons)if(m.pvp&&!m.dead&&hd(m,P)<r)dealDmg(m,pbase()*2.5,{ug:0});}
+function bmReward(boss,key){const d=BM.dmg[key]||0;const lv=S.level;const top=d>=(BM.top||0);
+  BCH.push({boss:'ราชาปีศาจ (ร่างของ '+boss.name+')',t:'bm',rank:1,N:1,dmg:Math.round(d),tank:0,items:Math.random()<0.6?[{k:'g',g:mkGear(lv,2.5)}]:[],gold:Math.round(250*ECON.gold*(1+lv*0.1)),exp:Math.round(60+lv*30),arrows:{thunder:6,bomb:6,holy:2},pots:3,mref:null});
+  soulAdd('holy',6);bigAlert('⚔️','ปราบราชาปีศาจสำเร็จ!','ทุกคนที่ช่วยตีได้รับกล่องรางวัล',null,5000);setTimeout(chestShow,1500);}
+{const _rc=recalc;recalc=function(){_rc();if(BM.me&&!BR.on){DS.maxHp=Math.round(DS.maxHp*(6+3*BM.n0));DS.atk*=2.2;DS.defPct=Math.max(DS.defPct,0.3);DS.spd*=1.08;}};}
+{const _ok=pvpOK;pvpOK=function(b){if(BR.on)return BR.started&&!b.dead&&P.dead<=0&&!BR.out;
+  if((b.bm&&b.bm===EV.key)||BM.me)return !b.dead&&P.dead<=0&&!inTown(P)&&!inTown(b)&&(BM.me||!!b.bm);return _ok(b);};}
+{const _ps=pvpSync;pvpSync=function(){_ps();for(const[k,m]of NET.pvpT){const b=NET.rem.get(k);if(b&&b.bm){m.rad=1.3;m.h=3.4;m.d.name='😈 '+b.name;}}};}
+{const _up=updPvp;updPvp=function(m){const loss=1e6-m.hp;if(loss>0){const b=NET.rem.get(m.peer);if(b&&b.bm){BM.dmg[b.bm]=(BM.dmg[b.bm]||0)+loss;soulAdd('holy',loss/400);}}return _up(m);};}
+{const _dr=drawRemote;drawRemote=function(b){if(b.bm&&!b.dead&&KAY.ok&&KAY.pieces.Demon){bmDraw('r'+b.peer,b.x,b.y,b.z,b.yaw,b.a&&b.a[0]>=0?'d_cast':(b.a&&b.a[4]?'d_move':'d_idle'),b.a&&b.a[0]>=0?b.a[0]*0.6:frame/60,b.flash>0);return;}return _dr(b);};}
+{const _dh=drawHuman;drawHuman=function(x,y,z,yaw,o){if(o&&o.key==='P'&&BM.me&&KAY.ok&&KAY.pieces.Demon&&P.dead<=0){const ap=P.atkT>0?1-P.atkT/P.atkDur:-1;
+  bmDraw('Pbm',x,y,z,yaw,ap>=0?'d_cast':(Math.hypot(P.vx,P.vz)>0.03?'d_move':'d_idle'),ap>=0?ap*0.6:frame/60,false);return;}return _dh(x,y,z,yaw,o);};}
+function bmDraw(key,x,y,z,yaw,an,t,fl){kayPose(key,an,t,frame/60);const op=OP;OP={a:1,f:fl?0.6:0};KAY.sp=0.06;KAY.rm=0.14;
+  push();T(x,y,z);RY(yaw);SCL(1.3,1.3,1.3);const L=[['Demon',[1.15,0.85,0.85],0]];if(!SHMODE&&KAY.pieces.Demon_g)L.push(['Demon_g',[1,0.4,0.1],1]);kayDraw(L);pop();OP=op;KAY.sp=KAY.rm=undefined;
+  if(!SHMODE&&frame%4===0)part(x+rand(-0.8,0.8),y+rand(0.5,3),z+rand(-0.8,0.8),'#ff3d00',1,0.02,30,0.3,-0.003);}
+{const _di=die;die=function(){if(BR.on)return brDie();if(BM.me){bmEnd('dead');}return _di();};}
+
+// ---------------- 5) moon royale (battle royale) ----------------
+const BRZ=Object.assign({},ZONES[0],{name:'🌕 ศึกจันทราล่มสลาย',br:1,regions:[],spawnZ:220,backZ:220,portal:{z:99999,to:0,need:0,label:''}});
+ZONES.push(BRZ);
+const BR={zi:ZONES.length-1,on:false,reg:'',key:'',t0:0,started:false,out:false,bak:null,c:{x:0,z:220},chests:[],opened:new Set(),n0:0,hp:0,atk:0,res:''};
+const BR_WIN=[[12,15,20],[52,55,60]];
+function brPhase(){const t=gNow(),d=new Date(t),m=d.getUTCMinutes(),s=d.getUTCSeconds(),hk=Math.floor(t/3600e3);
+  for(const[a,b,e]of BR_WIN){if(m>=a&&m<b)return{ph:'reg',key:hk+'-'+b,left:(b-m)*60-s};if(m>=b&&m<e)return{ph:'match',key:hk+'-'+b,el:(m-b)*60+s,left:(e-m)*60-s};}
+  return{ph:'none'};}
+function brRadius(el){const r0=110,S1=[[0,r0],[40,r0],[100,60],[160,60],[220,24],[255,24],[290,4]];for(let i=1;i<S1.length;i++){const[a,ra]=S1[i-1],[b,rb]=S1[i];if(el<b)return ra+(rb-ra)*Math.max(0,(el-a)/(b-a));}return 4;}
+function brSetup(key){const R=srand(shash('br'+key));BR.c={x:(R()-0.5)*16,z:190+R()*50};BR.chests=[];BR.opened=new Set();
+  for(let i=0;i<40;i++){const z=95+R()*240,hw=BRZ.hw(z)-3,x=(R()*2-1)*hw;const r=R();const kind=r<0.32?'wpn':r<0.52?'hp':r<0.7?'atk':r<0.86?'pot':'arrow';
+    BR.chests.push({i,x,z,kind,w:['katana','dagger','greatsword','pistol','cannon','bow'][Math.floor(R()*6)],tier:1+Math.floor(R()*3),at:['fire','ice','thunder','bomb','poison'][Math.floor(R()*5)]});}}
+function brJoin(){const ph=brPhase();if(ph.ph!=='reg')return;if(BR.reg===ph.key){BR.reg='';toast('ยกเลิกการลงทะเบียนแล้ว');}else{if(S.level<3){toast('ต้องเลเวล 3 ขึ้นไป');return;}BR.reg=ph.key;toast('🌕 ลงทะเบียนแล้ว! การแข่งจะเริ่มเมื่อหมดเวลานับถอยหลัง');}brUI();}
+function brEnter(key){if(BM.me)bmEnd('yield');BR.bak={zone:S.zone,cur:S.cur,w:JSON.parse(JSON.stringify(S.w)),pot:S.potions,arr:Object.assign({},S.arrows),as:S.arrowSel};
+  BR.on=true;BR.key=key;BR.t0=Date.now();BR.started=false;BR.out=false;BR.hp=0;BR.atk=0;BR.res='';brSetup(key);
+  for(const k in S.w)S.w[k].lv=0;S.cur='dagger';S.potions=1;for(const k in S.arrows)S.arrows[k]=0;S.arrowSel='normal';
+  const R=Math.random()*6.283,rr=30+Math.random()*50;enterZone(BR.zi,BR.c.z+Math.sin(R)*rr);P.x=Math.max(-28,Math.min(28,BR.c.x+Math.cos(R)*rr*0.4));
+  bots=[];mons=[];Z.npcs=[];document.body.classList.add('brmode');recalc();P.hp=DS.maxHp;P.dead=0;bigAlert('🌕','ศึกจันทราล่มสลาย!','ทุกคนเริ่มตัวเปล่า · เปิดหีบหาอาวุธ · อยู่ในวงแสงจันทร์ · คนสุดท้ายที่รอดชนะ',null,7000);try{musFanfare(0);}catch(e){}}
+function brExit(msg){if(!BR.on)return;const b=BR.bak;BR.on=false;document.body.classList.remove('brmode');BR.reg='';if(b){S.cur=b.cur;S.w=b.w;S.potions=b.pot;S.arrows=b.arr;S.arrowSel=b.as;}
+  P.dead=0;enterZone(0,ZONES[0].spawnZ);recalc();P.hp=DS.maxHp;save();if(msg)toast(msg);}
+function brDie(){P.hp=0;P.dead=1e9;BR.out=true;if(P.pvpBy){NET.dkI++;NET.dk=[NET.dkI,P.pvpBy];}
+  const alive=NET.rl.filter(b=>!b.dead).length;const rank=alive+1;banner('💀 ตกรอบ! อันดับ '+rank,'#ff8a80');part(P.x,P.y+1,P.z,'#ffffff',30,0.2,60,0.3);
+  const g=Math.round((rank<=3?120:40)*ECON.gold*(1+S.level*0.05));BR.res='rank'+rank;setTimeout(()=>{brExit('🌕 จบการแข่ง อันดับ '+rank+' · รับ '+g+' ทอง');S.gold+=g;gainExp(30+S.level*10);save();},4500);}
+function brWin(){if(BR.res)return;BR.res='win';const lv=S.level;bigAlert('🏆','ชนะศึกจันทราล่มสลาย!','คุณคือผู้รอดชีวิตคนสุดท้าย',null,7000);try{musFanfare(1);}catch(e){}
+  part(P.x,P.y+2,P.z,'#ffd54f',80,0.35,70,0.4);S.brW=(S.brW||0)+1;chat('','🏆 '+NET.name+' ชนะศึกจันทราล่มสลาย!',true);
+  setTimeout(()=>{brExit();BCH.push({boss:'ศึกจันทราล่มสลาย — ผู้ชนะ',t:'br',rank:1,N:BR.n0,dmg:0,tank:0,items:[{k:'g',g:mkGear(lv,3)}],gold:Math.round(600*ECON.gold*(1+lv*0.1)),exp:Math.round(100+lv*50),arrows:{thunder:8,bomb:8,holy:4},pots:5,mref:null});chestShow();},6000);}
+function brTick(){const ph=brPhase();
+  if(!BR.on){if(ph.ph==='match'&&BR.reg===ph.key&&ph.el<20&&P.dead<=0)brEnter(ph.key);
+    if(ph.ph==='reg'&&BR.regAl!==ph.key){BR.regAl=ph.key;bigAlert('🌕','ศึกจันทราล่มสลาย เปิดรับสมัคร!','กดปุ่ม "เข้าร่วมศึก" มุมจอ · เริ่มในอีก '+Math.ceil(ph.left/60)+' นาที',null,6000);try{musFanfare(2);}catch(e){}}
+    brUI();return;}
+  brUI();if(ph.ph!=='match'||ph.key!==BR.key){if(!BR.res){BR.res='draw';brExit('🌕 หมดเวลา! ผลเสมอ รับรางวัลเข้าร่วม');S.gold+=Math.round(60*ECON.gold);save();}return;}
+  const el=(Date.now()-BR.t0)/1000;const alive=NET.rl.filter(b=>!b.dead);
+  if(!BR.started&&el>10){BR.n0=alive.length+1;if(BR.n0<2){BR.res='cancel';brExit('🌕 ผู้เล่นไม่พอ ยกเลิกการแข่ง');return;}BR.started=true;banner('⚔️ เริ่มต่อสู้! เหลือ '+BR.n0+' คน','#ffd54f');}
+  if(BR.started&&!BR.out&&alive.length===0&&!BR.res)brWin();
+  // shrinking moonlight
+  const r=brRadius(ph.el),d=Math.hypot(P.x-BR.c.x,P.z-BR.c.z);
+  if(d>r&&P.dead<=0&&!BR.out){const k=0.004*(1+ph.el/60);P.hp-=DS.maxHp*k*0.5;if(frame%20===0){txt(P.x,P.y+2.2,P.z,'แสงจันทร์แผดเผา!','#80d8ff');}if(P.hp<=0)die();}
+  // chests
+  for(const c of BR.chests){if(BR.opened.has(c.i)||BR.out)continue;if(Math.hypot(P.x-c.x,P.z-c.z)<1.7)brOpen(c);}
+  for(const p of NET.peers||[]){const q=p.presence;if(q&&Array.isArray(q.bro)&&q.brk===BR.key)for(const i of q.bro)BR.opened.add(num(i,-1));}}
+function brOpen(c){BR.opened.add(c.i);part(c.x,1,c.z,'#ffd54f',25,0.2,40,0.3);SFX.coin&&SFX.coin();let t='';
+  switch(c.kind){case 'wpn':S.cur=c.w;S.w[c.w].lv=Math.max(S.w[c.w].lv,c.tier*4);t=`🗡️ ${WEAPONS[c.w].name} +${c.tier*4}`;break;
+  case 'hp':BR.hp+=150;t='❤️ เลือดสูงสุด +150';break;case 'atk':BR.atk+=0.15;t='⚔️ พลังโจมตี +15%';break;case 'pot':S.potions+=2;t='🧪 ยา x2';break;
+  case 'arrow':S.arrows[c.at]=(S.arrows[c.at]||0)+12;t='➶ '+(ARROWS[c.at]?ARROWS[c.at].name:'ลูกธนู')+' x12';break;}
+  const r=P.hp/DS.maxHp;recalc();P.hp=Math.min(DS.maxHp,Math.max(P.hp,r*DS.maxHp));banner('📦 '+t,'#ffd54f');}
+{const _rc=recalc;recalc=function(){_rc();if(BR.on){DS.maxHp=450+BR.hp;DS.atk=1+BR.atk;DS.defPct=0;DS.defFlat=0;DS.crit=0.08;DS.critM=1.8;DS.steal=0;DS.regen=0.4;DS.revive=false;DS.thorns=0;}};}
+{const _sv=save;save=function(){if(BR.on)return;return _sv.apply(this,arguments);};}
+{const _cs=cloudSave;cloudSave=function(f){if(BR.on)return Promise.resolve(false);return _cs(f);};}
+{const _sb=spawnBots;spawnBots=function(){if(BR.on||(Z&&Z.br)){bots=[];return;}return _sb();};}
+{const _rp=respawn;respawn=function(){if(BR.on)return;return _rp();};}
+function brDraw(){if(!BR.on||SHMODE)return;const ph=brPhase();const r=brRadius(ph.el||0);
+  const N=64;for(let i=0;i<N;i++){const a=i/N*6.283,x=BR.c.x+Math.cos(a)*r,z=BR.c.z+Math.sin(a)*r;if(Math.abs(z-CAM.tz)>90)continue;push();T(x,0,z);RY(-a);SCL(0.06,9,r*6.283/N);T(0,0.5,0);draw(GEO.boxC,C('#b3e5fc'),0.28+0.08*Math.sin(frame*0.05+i),1,0);pop();}
+  push();T(BR.c.x,0.08,BR.c.z);SCL(r);draw(GEO.ring,C('#e1f5fe'),0.6,1,0);pop();
+  for(const c of BR.chests){if(BR.opened.has(c.i)||Math.abs(c.z-CAM.tz)>70)continue;push();T(c.x,0,c.z);RY(c.i);SCL(0.9,0.6,0.6);T(0,0.5,0);draw(GEO.boxC,C('#8d5524'),1,0,0);pop();
+    push();T(c.x,0.6,c.z);RY(c.i);SCL(0.95,0.15,0.65);T(0,0.5,0);draw(GEO.boxC,C('#ffca28'),1,0.4,0);pop();if(frame%12===c.i%12)part(c.x,0.9,c.z,'#fff59d',1,0.01,50,0.2,-0.01);}}
+function brUI(){let el=$('brBtn');const ph=brPhase();const show=(ph.ph==='reg'&&!BR.on)||BR.on;
+  if(!show){if(el)el.remove();return;}if(!el){el=document.createElement('div');el.id='brBtn';document.body.appendChild(el);el.onclick=()=>{if(!BR.on)brJoin();};}
+  const mm=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
+  if(BR.on){const alive=NET.rl.filter(b=>!b.dead).length+(BR.out?0:1);el.className='on';el.innerHTML=`🌕 เหลือ <b>${alive}</b> คน · ${mm(ph.left||0)}`;}
+  else{el.className=BR.reg===ph.key?'reg':'';el.innerHTML=BR.reg===ph.key?`✅ ลงทะเบียนแล้ว · เริ่มใน ${mm(ph.left)}`:`🌕 เข้าร่วมศึก · ${mm(ph.left)}`;}}
+{const _np=netPublish;netPublish=function(){if(NET.R){try{NET.R.presence({bm:BM.me?BM.key:(BM.ghost&&Date.now()-BM.ghostT<9000?BM.ghost:null),brk:BR.on?BR.key:null,bro:BR.on?[...BR.opened].slice(-60):null});}catch(e){}}return _np();};}
+{const st=document.createElement('style');st.textContent=`
+#townBar{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:60;background:rgba(30,10,6,.85);border:2px solid #ff8a65;border-radius:12px;padding:4px 12px 10px;color:#ffccbc;font-size:13px;min-width:200px;text-align:center;pointer-events:none}
+#townBar i{position:absolute;left:8px;bottom:4px;height:4px;background:linear-gradient(90deg,#ff5252,#ffca28);border-radius:3px;max-width:calc(100% - 16px)}
+#brBtn{position:fixed;right:12px;top:118px;z-index:70;background:linear-gradient(#1a237e,#0d1240);border:2px solid #80d8ff;color:#e1f5fe;font-weight:800;font-size:14px;padding:8px 14px;border-radius:14px;box-shadow:0 0 16px rgba(128,216,255,.6);cursor:pointer;animation:alPulse 1.4s infinite}
+body.brmode #qtrack{display:none!important}
+#brBtn.reg{background:linear-gradient(#1b5e20,#0b3010);border-color:#a5d6a7}#brBtn.on{cursor:default;animation:none}
+#soulSay{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:55;max-width:min(520px,80vw);background:rgba(10,6,20,.82);border:1px solid var(--sc,#ffd54f);color:#fff;font-size:14px;padding:6px 12px;border-radius:12px;pointer-events:none;text-align:center}`;document.head.appendChild(st);}
+function soulUI(){let el=$('soulSay');if(SOULT.t>0&&SOULT.say){if(!el){el=document.createElement('div');el.id='soulSay';document.body.appendChild(el);}el.style.setProperty('--sc',soulCol()||'#ffd54f');el.innerHTML='🗡️ <b>'+cleanTxt(soul().nm)+':</b> '+SOULT.say;el.style.opacity=Math.min(1,SOULT.t/40);}else if(el)el.remove();}
+// master tick
+setInterval(()=>{try{if(typeof paused!=='undefined'&&paused)return;if(!$('title').classList.contains('hidden'))return;soulTick();townTick();townBar();bmTick();brTick();soulUI();}catch(e){console.warn('v12 tick',e);}},500);
+setInterval(()=>{if(S.zone===0||!WR.ok)worldPull(WR.ok);},20000);setTimeout(()=>worldPull(false),2500);
+
+
 // ================= Start / loop =================
 let glOK=false;
 if(!S.gfx)S.gfx=matchMedia('(pointer:coarse)').matches?'med':'high';window.__dprCap=(GFX[S.gfx]||GFX.med).dpr;resize();
