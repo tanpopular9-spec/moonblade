@@ -371,7 +371,7 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
   <div><button class="btn alt sm" id="newBtn">เริ่มใหม่ทั้งหมด</button></div>
   <p>อาณาจักรยุคกลางแห่งจันทร์เสี้ยว · อาชีพ 7 สาย + อาชีพลับ 4 สาย · กิลด์และเควส · อาวุธ 6 แบบพร้อมอันติ · ธนู 7 ชนิด</p>
   <div id="rotateHint">📱 แนะนำหมุนจอแนวนอน · ซ้าย = ลากเดิน · ลากที่ว่างบนจอ = หมุนกล้อง<br>💻 WASD เดิน · ลากเมาส์/ลูกศร หมุนกล้อง · Space กระโดด · J โจมตี</div>
-  <div id="glErr" class="hidden">อุปกรณ์นี้ไม่รองรับ WebGL จึงเล่นเวอร์ชัน 3D ไม่ได้</div>
+  <div id="glErr" class="hidden">⚠️ กราฟิก 3D ของเบราว์เซอร์ค้าง<br><span style="font-size:.8em;color:#ffe0b2">ปัดปิดแอปเบราว์เซอร์/LINE ออกจากหน้าแอปล่าสุดให้หมด แล้วเปิดลิงก์ใหม่ใน Chrome · ถ้ายังไม่ได้ ให้รีสตาร์ทมือถือ 1 ครั้ง</span></div>
 </div>
 
 <div id="menu" class="ov hidden">
@@ -393,7 +393,7 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
 </div>
 
 <script>
-const BUILD='v13';
+const BUILD='v13b';
 (function(){try{fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/const BUILD='([^']+)'/);
   if(m&&m[1]!==BUILD&&sessionStorage.getItem('mbUpd')!==m[1]){sessionStorage.setItem('mbUpd',m[1]);location.replace(location.pathname+'?v='+m[1]);}}).catch(()=>{});}catch(e){}})();
 </script>
@@ -414,7 +414,9 @@ const mixC=(a,b,t)=>{const x=C(a),y=C(b);return[x[0]+(y[0]-x[0])*t,x[1]+(y[1]-x[
 
 // ================= Canvas / GL =================
 const cv=$('gl'),ovc=$('ov'),oc=ovc.getContext('2d');
-let gl=null;try{gl=cv.getContext('webgl',{antialias:true,alpha:false,premultipliedAlpha:false})||cv.getContext('experimental-webgl');}catch(e){}
+let gl=null;for(const o of[{antialias:true,alpha:false,premultipliedAlpha:false},{antialias:false,alpha:false,premultipliedAlpha:false,powerPreference:'low-power'},{antialias:false,failIfMajorPerformanceCaveat:false}]){if(gl)break;for(const n of['webgl','experimental-webgl']){try{gl=cv.getContext(n,o);}catch(e){}if(gl)break;}}
+cv.addEventListener('webglcontextlost',e=>{e.preventDefault();let n=+(sessionStorage.getItem('mb_glr')||0);if(n<2){sessionStorage.setItem('mb_glr',n+1);try{if(typeof S!=='undefined'&&S){S.gfx='low';save();}}catch(er){}setTimeout(()=>location.reload(),300);}else{const el=document.getElementById('glErr');if(el){el.classList.remove('hidden');}}},false);
+setTimeout(()=>{try{sessionStorage.removeItem('mb_glr');}catch(e){}},60000);
 let DPR=1,SW=1,SH=1;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,window.__dprCap||1.5);SW=innerWidth;SH=innerHeight;
   for(const c of[cv,ovc]){c.width=Math.round(SW*DPR);c.height=Math.round(SH*DPR);c.style.width=SW+'px';c.style.height=SH+'px';}
