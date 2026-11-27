@@ -395,7 +395,7 @@ body.hudEdit #party::before,body.hudEdit #qtrack::before,body.hudEdit #chat::bef
 </div>
 
 <script>
-const BUILD='v17';
+const BUILD='v17c';
 (function(){try{fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/const BUILD='([^']+)'/);
   if(m&&m[1]!==BUILD&&sessionStorage.getItem('mbUpd')!==m[1]){sessionStorage.setItem('mbUpd',m[1]);location.replace(location.pathname+'?v='+m[1]);}}).catch(()=>{});}catch(e){}})();
 </script>
@@ -3349,7 +3349,7 @@ function bufRender(){let el=$('bufRow');if(!el){const pb=document.querySelector(
 function townTick(){if(frame%60===0){const now=Date.now();let ch=0;for(const k in S.buf)if(!(S.buf[k]>now)){delete S.buf[k];ch=1;if(BUFS[k])toast(`หมดฤทธิ์ ${BUFS[k].i} ${BUFS[k].n}`);}
     if(ch){recalcKeep();save();}if(bufOn('regen')&&P.dead<=0&&P.hp<DS.maxHp)P.hp=Math.min(DS.maxHp,P.hp+DS.maxHp*0.01*(P.pvpCT>0?0.15:1));bufRender();}
   if(SHOP.k&&frame%20===0&&SHOP.npc&&(Math.hypot(P.x-SHOP.npc.x,P.z-SHOP.npc.z)>6||P.dead>0))shopClose();}
-const _gt5=gearTick;gearTick=function(){_gt5();townTick();};
+const _gt5=gearTick;gearTick=function(){_gt5();townTick();try{wTownTick();}catch(e){}};
 
 // ---------- shop panel ----------
 const SHOP={k:null,npc:null,res:null};
@@ -4314,7 +4314,7 @@ const W_BEAUTY=()=>{let t=0;for(let i=0;i<BEAUTY.length;i++)if(WR.don>=BEAUTY[i]
 const townOK=()=>!WR.fallen&&WR.rep>=REPAIR_NEED;
 const worldPack=o=>({fallen:o.fallen?1:0,rep:Math.max(0,Math.min(REPAIR_NEED,num(o.rep,0))),don:Math.max(0,num(o.don,0)),ft:num(o.ft,0),by:(accGet()||{}).k||'',t:firebase.database.ServerValue.TIMESTAMP});
 function worldParse(v){if(!v||typeof v!=='object')return null;if(typeof v.d==='string'){try{const o=JSON.parse(v.d);return o&&o.world?o:null;}catch(e){return null;}}return 'rep' in v?v:null;}
-async function worldRef(){if(WR.ref)return WR.ref;const db=await accDB();WR.ref=db.ref('world');return WR.ref;}
+async function worldRef(){if(WR.ref)return WR.ref;const db=await accDB();WR.ref=db.ref('world');try{WR.ref.on('value',sn=>{const v=sn.val();if(v)worldApply(worldParse(v),true);},()=>{});}catch(e){}return WR.ref;}
 function worldApply(o,announce){const was=WR.fallen,wasOk=townOK(),wasB=W_BEAUTY();o=o||{fallen:0,rep:REPAIR_NEED,don:0};WR.fallen=o.fallen?1:0;WR.ft=num(o.ft,0);WR.rep=num(o.rep,REPAIR_NEED);WR.don=num(o.don,0);WR.ok=true;
   if(!announce)return;
   if(WR.fallen&&!was)bigAlert('🔥','หมู่บ้านจันทร์เสี้ยวถูกยึดแล้ว!','ร้านค้าทุกร้านปิด · ร่วมกันบุกยึดเมืองคืนและปราบผู้คุมเมือง','#ff8a80',8000);
@@ -4323,10 +4323,10 @@ function worldApply(o,announce){const was=WR.fallen,wasOk=townOK(),wasB=W_BEAUTY
   if(W_BEAUTY()>wasB)bigAlert('🌸','เมืองสวยขึ้นเป็นระดับ '+W_BEAUTY()+'!','ขอบคุณทุกคนที่ร่วมบริจาค · โบนัส EXP และทอง +'+(W_BEAUTY()*3)+'%','#ffd54f',6000);}
 async function worldPull(announce){try{const ref=await worldRef();let v=(await ref.once('value')).val();
   if(!v&&!WR.migr){WR.migr=1;try{const db=await accDB();const old=worldParse((await db.ref('saves/'+_hx(await crypto.subtle.digest('SHA-256',_te.encode('mb-world-v1'))).slice(0,16)).once('value')).val());if(old){await worldTx(()=>old);v=(await ref.once('value')).val();}}catch(e){}}worldApply(worldParse(v),announce);}catch(e){if(!WR.ok){WR.ok=true;WR.rep=REPAIR_NEED;}}}
-async function worldTx(fn){try{const ref=await worldRef();const r=await ref.transaction(c=>{const o=worldParse(c)||{fallen:0,rep:REPAIR_NEED,don:0};const n=fn(o);return n?worldPack(n):undefined;});
+async function worldTx(fn){try{const ref=await worldRef();const r=await ref.transaction(c=>{const o=worldParse(c)||(WR.ok?{fallen:WR.fallen,rep:WR.rep,don:WR.don,ft:WR.ft}:{fallen:0,rep:REPAIR_NEED,don:0});const n=fn(Object.assign({},o));return n?worldPack(n):undefined;});
   if(r&&r.committed)worldApply(worldParse(r.snapshot.val()),true);return r&&r.committed;}catch(e){console.warn('world',e);return false;}}
 function townFall(){if(WR.fallen)return;worldTx(o=>o.fallen?null:Object.assign(o,{fallen:1,ft:Date.now(),rep:0}));}
-function townLiberate(){worldTx(o=>o.fallen?Object.assign(o,{fallen:0,rep:0}):null);}
+function townLiberate(){WR.libPend=Date.now();worldTx(o=>o.fallen?Object.assign(o,{fallen:0,rep:0}):null).then(ok=>{if(ok)WR.libPend=0;});}
 async function townDonate(n){n=Math.floor(n);if(n<=0||S.gold<n){toast('ทองไม่พอ');return;}if(WR.fallen){toast('ต้องยึดเมืองคืนก่อนถึงจะบริจาคได้');return;}
   S.gold-=n;save();const ok=await worldTx(o=>{if(o.fallen)return null;o.don=num(o.don,0)+n;o.rep=Math.min(REPAIR_NEED,num(o.rep,0)+n);return o;});
   if(ok){toast('🙏 บริจาค '+n+' ทอง ขอบคุณ!');soulAdd('holy',n/20);chat('','🏗️ '+NET.name+' บริจาค '+n+' ทองเพื่อบูรณะเมือง',true);}else{S.gold+=n;save();toast('บริจาคไม่สำเร็จ ลองใหม่อีกครั้ง');}renderMenuSafe();}
@@ -4359,14 +4359,15 @@ function townCard(){const b=W_BEAUTY();const st=WR.fallen?'🔥 ถูกมอ�
 {const _os=openShop;openShop=function(k,n){if(S.zone===0&&!townOK()){toast(WR.fallen?'🔥 ร้านปิด — เมืองถูกยึดครอง':'🛠️ ร้านปิดชั่วคราว — เมืองกำลังซ่อม ช่วยบริจาคได้ที่เมนู ☰');return;}return _os(k,n);};}
 {const _mo=mkOpen;mkOpen=function(){if(S.zone===0&&!townOK()){toast(WR.fallen?'🔥 ตลาดปิด — เมืองถูกยึดครอง':'🛠️ ตลาดปิดชั่วคราว — เมืองกำลังซ่อม');return;}return _mo();};}
 {const _eb=evBossDown;evBossDown=function(m){TOWN.won=EV.key;return _eb(m);};}
-{const _es=evSpawn;evSpawn=function(){_es();if(!NET.host||S.zone!==0||!Z||BR.on)return;
+{const _es=evSpawn;evSpawn=function(){_es();if(WR.libPend&&Date.now()-WR.libPend>4000){if(WR.fallen)townLiberate();else WR.libPend=0;}
+  if(!NET.host||S.zone!==0||!Z||BR.on)return;if(!WR.fallen||WR.libPend){for(const m of mons)if(m.ev==='occ'&&!m.dead&&!m.occGone){m.occGone=1;m.dead=true;m.hp=0;}if(WR.libPend)return;}
   if(WR.fallen){const occ=mons.filter(m=>m.ev==='occ'&&!m.dead);const lv=Math.max(4,Math.min(16,Math.round(avgLv())+1));
     if(occ.filter(m=>m.t!=='warlord').length<8){const t=pick(['wolf','skeleton','mushroom','wolf','archer']);const m=spawnMon(t,rand(-14,14),rand(-20,30),lv,-1);m.ev='occ';m.R={a:-26,b:33};}
     if(!occ.some(m=>m.t==='warlord')&&Date.now()-(WR.occAt||0)>10000){WR.occAt=Date.now();const m=spawnMon('warlord',0,6,Math.max(8,lv),-1);m.ev='occ';m.occBoss=1;m.d=Object.assign({},m.d,{name:'ผู้คุมเมือง'});m.R={a:-20,b:30};}}};}
-{const _km=killMon;killMon=function(m){const r=_km(m);try{if(m.ev==='occ'&&m.t==='warlord'&&WR.fallen)townLiberate();
+{const _km=killMon;killMon=function(m){const r=_km(m);try{if(m.ev==='occ'&&m.t==='warlord'&&WR.fallen){WR.occAt=Date.now()+60000;townLiberate();}
     if(m.byP&&!m.pvp){soulAdd('blood',1);if(isNightNow()||EV.k)soulAdd('moon',isNightNow()?1:0.5);if(NET.pt&&NET.rl.some(b=>b.pt===NET.pt&&hd(b,m)<30))soulAdd('holy',0.6);if(P.hp<DS.maxHp*0.3)soulAdd('shadow',1);
       SOULT.idle=0;SOULT.kills.push(frame);SOULT.kills=SOULT.kills.filter(f=>frame-f<720);if(SOULT.kills.length>=6){SOULT.kills=[];soulSay('streak');}}}catch(e){console.warn(e);}return r;};}
-function townTick(){if(S.zone!==0||BR.on)return;
+function wTownTick(){if(S.zone!==0||BR.on)return;
   if(evOn('invade')&&!WR.fallen&&TOWN.won!==EV.key){if(TOWN.key!==EV.key){TOWN.key=EV.key;TOWN.hp=100;TOWN.pres=0;}TOWN.pres+=0.5;
     let dmg=0;for(const m of mons){if(m.dead||m.ev!=='invade')continue;if(Math.hypot(m.x,m.z-5)<16)dmg+=m.t==='warlord'?0.8:0.15;}TOWN.hp=Math.max(0,TOWN.hp-dmg);
     if(TOWN.hp<=0&&NET.host&&TOWN.fail!==EV.key){TOWN.fail=EV.key;townFall();}}
@@ -4498,7 +4499,7 @@ body.brmode #qtrack{display:none!important}
 #soulSay{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:55;max-width:min(520px,80vw);background:rgba(10,6,20,.82);border:1px solid var(--sc,#ffd54f);color:#fff;font-size:14px;padding:6px 12px;border-radius:12px;pointer-events:none;text-align:center}`;document.head.appendChild(st);}
 function soulUI(){let el=$('soulSay');if(SOULT.t>0&&SOULT.say){if(!el){el=document.createElement('div');el.id='soulSay';document.body.appendChild(el);}el.style.setProperty('--sc',soulCol()||'#ffd54f');el.innerHTML='🗡️ <b>'+cleanTxt(soul().nm)+':</b> '+SOULT.say;el.style.opacity=Math.min(1,SOULT.t/40);}else if(el)el.remove();}
 // master tick
-setInterval(()=>{try{if(typeof paused!=='undefined'&&paused)return;if(!$('title').classList.contains('hidden'))return;soulTick();townTick();townBar();bmTick();brTick();soulUI();}catch(e){console.warn('v12 tick',e);}},500);
+setInterval(()=>{try{if(typeof paused!=='undefined'&&paused)return;if(!$('title').classList.contains('hidden'))return;soulTick();wTownTick();townBar();bmTick();brTick();soulUI();}catch(e){console.warn('v12 tick',e);}},500);
 setInterval(()=>{if(S.zone===0||!WR.ok)worldPull(WR.ok);},20000);setTimeout(()=>worldPull(false),2500);
 
 
