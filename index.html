@@ -4821,10 +4821,10 @@ function m2Start(){STY.m2={n:0};STY.mus='eclipse';document.body.classList.add('f
 function m2Tick(){if(!STY.m2)return;const left=mons.filter(m=>m.ev==='story'&&!m.dead).length;if(left===0&&!CS.on){STY.m2=null;mons=mons.filter(m=>m.ev!=='story');csPlay('mem2b',()=>{story().m[1]=1;save();});}}
 // ---------- boss ----------
 function bossStart(){const s=story();STY.fight=1;STY.ecl=0.35;STY.lost=0;const lv=Math.max(10,S.level+2);const m=spawnMon('demon',0,123,lv,-1);
-  m.ev='story';m.story=1;m.d=Object.assign({},m.d,{name:'คุโรงาเนะ ราชันจันทร์ดับ',boss:true});m.R={a:104,b:136};m.max=m.hp=10000;m.atk=Math.round(DS.maxHp*0.1+DS.defFlat);m.agg=1;STY.boss=m;STY.ref=0;STY.ph=1;
+  m.ev='story';m.story=1;m.d=Object.assign({},m.d,{name:'คุโรงาเนะ ราชันจันทร์ดับ',boss:true});m.R={a:104,b:136};m.max=m.hp=10000;m.atk=Math.round(DS.maxHp*0.2+DS.defFlat);m.lv0=m.lv;m.lv=1000;m.agg=1;STY.boss=m;STY.ref=0;STY.ph=1;
   P.x=0;P.z=110;P.yaw=0;P.hp=DS.maxHp;STY.mus=null;}
 {const _dd=dealDmg;dealDmg=function(m,amt,o){if(!m||!m.story)return _dd(m,amt,o);const h0=m.hp;m.hp=1e9;const r=_dd(m,amt,o);const d=Math.max(0,1e9-m.hp);m.hp=h0;m.dead=false;
-  if(m.sInv){return r;}if(d>0){STY.ref=STY.ref?STY.ref*0.9+d*0.1:d;const u=10000/85*clamp(d/STY.ref,0.35,3);m.hp=Math.max(m.max*0.035,h0-u);}return r;};}
+  if(m.sInv){return r;}if(d>0){STY.ref=STY.ref?STY.ref*0.9+d*0.1:d;const u=10000/STY_HITS*clamp(d/STY.ref,0.35,3);m.hp=Math.max(m.max*0.035,h0-u);}return r;};}
 function bossTick(){const m=STY.boss;if(!STY.fight||!m)return;P.inv=Math.max(P.inv,0);const r=m.hp/m.max;
   if(STY.ph===1&&r<0.6){STY.ph=2;STY.ecl=0.85;csLine('คุโรงาเนะ','มืดลงอีกสิ... จงดับสูญไปพร้อมกับจันทร์!',200);shake(0.8);
     for(let i=0;i<4;i++){const a=i/4*6.28+0.6;const s=spawnMon('skeleton',Math.sin(a)*9,120+Math.cos(a)*9,Math.max(1,S.level-2),-1);s.ev='story';s.d=Object.assign({},s.d,{name:'เงาแห่งความแค้น'});s.hp=s.max=Math.round(s.hp*0.4);s.atk=Math.round(DS.maxHp*0.03+DS.defFlat);s.agg=1;}}
@@ -5092,7 +5092,7 @@ function kuroAura(x,z,s){s=s||1;push();T(x,0.05,z);RY(frame*0.02);SCL(3.2*s);dra
 // dark lightning strikes during the fight (telegraphed)
 STY.bolts=[];
 function storyBoltsTick(){const m=STY.boss;if(!STY.fight||!m||CS.on)return;const ph=STY.ph||1;
-  if(frame%(ph>=2?150:230)===0){const n=ph>=2?3:2;for(let i=0;i<n;i++)STY.bolts.push({x:P.x+rand(-3.5,3.5),z:P.z+rand(-3.5,3.5),t:70+i*12});}
+  if(frame%(ph>=2?(m.hp<m.max*0.3?80:110):170)===0){const n=ph>=2?(m.hp<m.max*0.3?5:4):3;for(let i=0;i<n;i++)STY.bolts.push({x:P.x+rand(-3.5,3.5),z:P.z+rand(-3.5,3.5),t:70+i*12});}
   for(const b of STY.bolts){b.t--;if(b.t===0){fx.push({k:'boom',x:b.x,y:1,z:b.z,r:2.6,col:'#b388ff',t:20,mt:20});shake(0.35);addLight(b.x,3,b.z,[0.8,0.5,1.4],14,18);flashA=Math.max(flashA,0.25);
       for(let k=0;k<14;k++)part(b.x+rand(-0.4,0.4),rand(0,9),b.z+rand(-0.4,0.4),pick(['#ffffff','#b388ff','#7c4dff']),1,0.05,26,0.3,0);
       if(Math.hypot(P.x-b.x,P.z-b.z)<2.3)hurtP(m.atk*0.8,m);}}
@@ -5107,6 +5107,10 @@ function storyRays(){if(!Z||!Z.story||SHMODE||STY.fb==='cold'||STY.ecl>0.6)retur
   if(CS.on){const sh=CS.shots[CS.i];if(sh&&sh.act){let L=[];try{L=sh.act(Math.min(1,CS.t/sh.d),CS.t)||[];}catch(e){}for(const a of L){if(a.ghost)addLight(a.x,1.5,a.z,a.who==='yuki'?[1.1,0.6,0.9]:[0.35,0.7,1.35],6,2);if(a.who==='light')addLight(a.x,a.y||1,a.z,[0.8,0.9,1.3],6,2);if(a.who==='katana'&&(a.glow||0)>0.4)addLight(a.x,0.6,a.z,[0.5,0.8,1.4],4,2);}}}}}catch(e){}return _ss();};}
 {const _bt=bossTick;bossTick=function(){_bt();try{storyBoltsTick();}catch(e){}};}
 // bigger boss hitbox
+// v19f: บอสเลเวล 1000 — เลือดหนา 3 เท่า ตีแรง โจมตีถี่ขึ้น 2 เท่า
+const STY_HITS=260;
+{const _km=killMon;killMon=function(m,...a){if(m&&m.story&&m.lv0!=null){m.lv=m.lv0;m.lv0=null;}return _km(m,...a);};}
+{const _bd=bossDemon;bossDemon=function(m,d,nx,nz,agg,sp,R,face){if(m.story){sp*=1.4;if(m.cd>0)m.cd-=(m.hp<m.max*0.3?1.6:1);}return _bd(m,d,nx,nz,agg,sp,R,face);};}
 {const _bs=bossStart;bossStart=function(){_bs();const m=STY.boss;if(m){m.rad*=1.5;m.h*=KURO_S;m.d=Object.assign({},m.d,{scl:1});}STY.bolts=[];};}
 
 // ================= Start / loop =================
