@@ -4813,7 +4813,7 @@ function storyAct(id){const s=story();
     if(i===0)csPlay('mem1',()=>{s.m[0]=1;save();});
     else if(i===1)csPlay('mem2a',()=>m2Start());
     else csPlay('mem3',()=>{s.m[2]=1;save();chat('🗡️ เรน','...ไปที่แท่นบูชาเถอะ มีบางอย่างที่ข้าอยากถามเจ้า');});return;}
-  if(id==='altar'){if(s.done){csPlay('ending',()=>credStart(true));return;}if(!s.m.every(Boolean)){chat('🗡️ '+cleanTxt(soul().nm),'...ยังไม่ถึงเวลา ไปดูความทรงจำให้ครบก่อน');return;}
+  if(id==='altar'){if(s.done){askBox('⚔️ ท้าสู้คุโรงาเนะอีกครั้ง?','ราชันจันทร์ดับ Lv.1000 · ชนะแล้ว '+(s.wins|0)+' ครั้ง · ชนะได้ทองและ EXP',()=>rematchStart());return;}if(!s.m.every(Boolean)){chat('🗡️ '+cleanTxt(soul().nm),'...ยังไม่ถึงเวลา ไปดูความทรงจำให้ครบก่อน');return;}
     if(STY.lost){STY.lost=0;csPlay('rise',()=>bossStart());return;}csPlay('altar',()=>csPlay('rise',()=>bossStart()));}}
 // ---------- memory 2: playable fight ----------
 function m2Start(){STY.m2={n:0};STY.mus='eclipse';document.body.classList.add('fbFire');STY.fb='fire';P.x=0;P.z=48;P.yaw=0;P.hp=DS.maxHp;bigAlert('🔥','ความทรงจำของเรน','ปกป้องหมู่บ้าน! ปราบทหารเงา 6 ตน','#ff8a65',4000);
@@ -4824,16 +4824,16 @@ function bossStart(){const s=story();STY.fight=1;STY.ecl=0.35;STY.lost=0;const l
   m.ev='story';m.story=1;m.d=Object.assign({},m.d,{name:'คุโรงาเนะ ราชันจันทร์ดับ',boss:true});m.R={a:104,b:136};m.max=m.hp=10000;m.atk=Math.round(DS.maxHp*0.2+DS.defFlat);m.lv0=m.lv;m.lv=1000;m.agg=1;STY.boss=m;STY.ref=0;STY.ph=1;
   P.x=0;P.z=110;P.yaw=0;P.hp=DS.maxHp;STY.mus=null;}
 {const _dd=dealDmg;dealDmg=function(m,amt,o){if(!m||!m.story)return _dd(m,amt,o);const h0=m.hp;m.hp=1e9;const r=_dd(m,amt,o);const d=Math.max(0,1e9-m.hp);m.hp=h0;m.dead=false;
-  if(m.sInv){return r;}if(d>0){STY.ref=STY.ref?STY.ref*0.9+d*0.1:d;const u=10000/STY_HITS*clamp(d/STY.ref,0.35,3);m.hp=Math.max(m.max*0.035,h0-u);}return r;};}
+  if(m.sInv){return r;}if(d>0){STY.ref=STY.ref?STY.ref*0.9+d*0.1:d;let u=10000/STY_HITS*clamp(d/STY.ref,0.35,3);const bu=STY.bud==null?300:STY.bud;if(u>bu){u=Math.max(0,bu);if(frame%20===0)txt(m.x,m.y+m.h+0.4,m.z,'ต้านทาน!','#b388ff');}STY.bud=bu-u;m.hp=Math.max(m.max*0.035,h0-u);}return r;};}
 function bossTick(){const m=STY.boss;if(!STY.fight||!m)return;P.inv=Math.max(P.inv,0);const r=m.hp/m.max;
   if(STY.ph===1&&r<0.6){STY.ph=2;STY.ecl=0.85;csLine('คุโรงาเนะ','มืดลงอีกสิ... จงดับสูญไปพร้อมกับจันทร์!',200);shake(0.8);
     for(let i=0;i<4;i++){const a=i/4*6.28+0.6;const s=spawnMon('skeleton',Math.sin(a)*9,120+Math.cos(a)*9,Math.max(1,S.level-2),-1);s.ev='story';s.d=Object.assign({},s.d,{name:'เงาแห่งความแค้น'});s.hp=s.max=Math.round(s.hp*0.4);s.atk=Math.round(DS.maxHp*0.03+DS.defFlat);s.agg=1;}}
   if(STY.ph===2&&r<0.27){STY.ph=3;STY.ally={x:P.x+1.5,z:P.z-1,yaw:0,cd:60,ap:-1,step:0};csLine('เรน','เจ้าไม่ได้สู้คนเดียว... ข้าอยู่ตรงนี้!',200);for(let i=0;i<20;i++)part(P.x+1.5+rand(-0.5,0.5),rand(0.2,2),P.z-1+rand(-0.5,0.5),pick(['#b3e5fc','#ffffff']),1,0.08,40,0.2,-0.006);}
-  if(STY.ph===3&&r<=0.036&&!CS.on){STY.ph=4;m.sInv=1;for(let i=projs.length-1;i>=0;i--)if(!projs[i].pl)projs.splice(i,1);warns.length=0;STY.bolts=[];for(const x of mons)if(x!==m&&!x.dead&&!x.pvp){x.dead=true;x.y=-60;}csPlay('final',()=>{m.sInv=0;m.byP=true;STY.ally=null;killMon(m);for(const x of mons)if(!x.dead&&!x.pvp){x.dead=true;x.y=-60;}for(let i=projs.length-1;i>=0;i--)if(!projs[i].pl)projs.splice(i,1);warns.length=0;STY.fight=0;STY.boss=null;csPlay('ending',()=>{credStart(false);});});}
+  if(STY.ph===3&&r<=0.036&&!CS.on){STY.ph=4;m.sInv=1;for(let i=projs.length-1;i>=0;i--)if(!projs[i].pl)projs.splice(i,1);warns.length=0;STY.bolts=[];for(const x of mons)if(x!==m&&!x.dead&&!x.pvp){x.dead=true;x.y=-60;}csPlay('final',()=>{m.sInv=0;m.byP=true;STY.ally=null;killMon(m);if(STY.rematch){rematchWin();return;}for(const x of mons)if(!x.dead&&!x.pvp){x.dead=true;x.y=-60;}for(let i=projs.length-1;i>=0;i--)if(!projs[i].pl)projs.splice(i,1);warns.length=0;STY.fight=0;STY.boss=null;csPlay('ending',()=>{credStart(false);});});}
   if(STY.ally){const a=STY.ally;const tx=m.x+Math.sin(frame*0.01)*3,tz=m.z-3;a.vx=(tx-a.x)*0.04;a.vz=(tz-a.z)*0.04;a.x+=a.vx;a.z+=a.vz;a.yaw=Math.atan2(m.x-a.x,m.z-a.z);if(a.ap>=0){a.ap+=0.05;if(a.ap>1)a.ap=-1;}
     if(--a.cd<=0&&!m.sInv&&!CS.on){a.cd=55;a.ap=0;a.step=(a.step+1)%7;m.hp=Math.max(m.max*0.035,m.hp-m.max*0.012);m.flash=6;fx.push({k:'slash',x:m.x,y:m.y+1.6,z:m.z,yaw:a.yaw,r:2.6,col:'#80d8ff',t:14,mt:14,step:a.step});txt(m.x,m.y+m.h+0.5,m.z,'เรน!','#80d8ff',true);part(m.x,m.y+1.5,m.z,'#b3e5fc',10,0.12,24,0.25);}}}
 function allyDraw(){const a=STY.ally;if(!a||!STY.fight)return;drawActor({who:'ren',x:a.x,z:a.z,y:0.1,yaw:a.yaw,ghost:true,al:0.6,an:a.ap>=0?'swing':(Math.hypot(a.vx||0,a.vz||0)>0.03?'run':null),ph:a.ap,step:a.step},true);if(frame%3===0)part(a.x+rand(-0.4,0.4),rand(0.3,1.9),a.z+rand(-0.4,0.4),'#81d4fa',1,0.01,40,0.2,-0.004);}
-{const _di=die;die=function(){if(Z&&Z.story){if(STY.fight){for(const m of mons)if(m.ev==='story')m.dead=true;STY.fight=0;STY.boss=null;STY.ally=null;STY.ecl=0;STY.lost=1;setTimeout(()=>chat('🗡️ เรน','...ลุกขึ้นเถอะ เราจะลองอีกครั้ง ข้ายังอยู่ตรงนี้'),3000);}
+{const _di=die;die=function(){if(Z&&Z.story){if(STY.fight){for(const m of mons)if(m.ev==='story')m.dead=true;STY.fight=0;STY.rematch=0;STY.boss=null;STY.ally=null;STY.ecl=0;STY.lost=1;setTimeout(()=>chat('🗡️ เรน','...ลุกขึ้นเถอะ เราจะลองอีกครั้ง ข้ายังอยู่ตรงนี้'),3000);}
   if(STY.m2){for(const m of mons)if(m.ev==='story')m.dead=true;STY.m2=null;STY.fb=null;document.body.classList.remove('fbFire');}}return _di();};}
 {const _mw=musWant;musWant=function(){if(Z&&Z.story&&STY.mus)return STY.mus;if(Z&&Z.story&&STY.fight)return 'boss';return _mw();};}
 THEMES.memory={sd:0.24,bars:[[57,0],[53,1],[48,1],[55,1]],fn(t,st,root,maj){const i=st%16,th=maj?4:3;
@@ -4961,6 +4961,13 @@ function csLine(who,t,dur){const el=$('soulSay');chat('💬 '+(SPK[who]||who),t)
 {const _rc=recalc;recalc=function(){_rc();try{if(S.story&&S.story.done&&S.cur==='katana'){DS.atk*=1.08;DS.crit+=0.03;}}catch(e){}};}
 const REN_ECHO=['...คืนนี้พระจันทร์สวยนะ','(เหมือนได้ยินเสียงหัวเราะเบาๆ ของยูกิ)','...ข้ายังเฝ้ามองเจ้าอยู่เสมอ','จำไว้นะ เจ้าไม่เคยต้องสู้คนเดียว'];
 {const _ss=soulSay;soulSay=function(trig,force){if(S.story&&S.story.done){if(Math.random()<0.88)return;chat('🌙 เสียงแผ่วๆ ของเรน',pick(REN_ECHO));return;}return _ss(trig,force);};}
+// v19g: ท้าสู้บอสซ้ำได้หลังจบเนื้อเรื่อง
+function rematchStart(){STY.rematch=1;STY.ally=null;STY.bolts=[];bigAlert('⚔️','ราชันจันทร์ดับ Lv.1000','การล้างแค้นอีกครั้ง!','#d500f9',2500);shake(0.6);flashA=0.4;
+  for(let i=0;i<24;i++)part(rand(-2,2),rand(0,5),123+rand(-2,2),pick(['#4a148c','#d500f9','#ffffff']),1,0.1,50,0.35,-0.006);bossStart();STY.mus='boss';}
+function rematchWin(){const s=story();for(const x of mons)if(!x.dead&&!x.pvp){x.dead=true;x.y=-60;}for(let i=projs.length-1;i>=0;i--)if(!projs[i].pl)projs.splice(i,1);warns.length=0;
+  STY.fight=0;STY.boss=null;STY.rematch=0;STY.ecl=0;STY.mus=null;STY.dawn=1;s.wins=(s.wins|0)+1;const g=3000+S.level*60;S.gold+=g;try{gainExp(Math.round(80+S.level*25));}catch(e){}
+  P.x=0;P.z=118;P.yaw=Math.PI;P.hp=DS.maxHp;save();try{cloudSave(true);}catch(e){}
+  bigAlert('🏆','ชนะคุโรงาเนะ ครั้งที่ '+s.wins,'+'+g.toLocaleString()+' ทอง · ไปที่แท่นบูชาเพื่อท้าสู้อีกครั้ง','#ffd54f',6000);chat('🗡️ เรน','...เจ้ายังแข็งแกร่งเหมือนเดิมสินะ');}
 function storyReward(){const s=story();if(s.done)return;s.done=1;s.st=3;recalc();save();try{cloudSave(true);}catch(e){}
   setTimeout(()=>bigAlert('🌙','ได้รับฉายา "ผู้ไม่ทอดทิ้ง"','ดาบคาตานะ · ความทรงจำของเรน — โจมตี +8% คริ +3% (เมื่อใช้คาตานะ)','#b3e5fc',8000),600);}
 function credStart(replay){const c=$('csCred');const me=(accGet()&&accGet().n)||NET.name||'ผู้กล้า';
@@ -5108,7 +5115,10 @@ function storyRays(){if(!Z||!Z.story||SHMODE||STY.fb==='cold'||STY.ecl>0.6)retur
 {const _bt=bossTick;bossTick=function(){_bt();try{storyBoltsTick();}catch(e){}};}
 // bigger boss hitbox
 // v19f: บอสเลเวล 1000 — เลือดหนา 3 เท่า ตีแรง โจมตีถี่ขึ้น 2 เท่า
-const STY_HITS=260;
+const STY_HITS=260,STY_MINSEC=180;
+{const _bt2=bossTick;bossTick=function(){if(STY.fight&&STY.boss&&!CS.on)STY.bud=Math.min(300,(STY.bud==null?300:STY.bud)+10000/(STY_MINSEC*60));_bt2();};}
+{const _hp=hurtP;hurtP=function(dmg,src){const b=src&&(src.story?src:(src.src&&src.src.story?src.src:null));
+  if(b&&b.atk>0&&STY.fight){const r=dmg/b.atk;dmg=(r*0.2*DS.maxHp+DS.defFlat)/Math.max(0.25,1-DS.defPct);}return _hp(dmg,src);};}
 {const _km=killMon;killMon=function(m,...a){if(m&&m.story&&m.lv0!=null){m.lv=m.lv0;m.lv0=null;}return _km(m,...a);};}
 {const _bd=bossDemon;bossDemon=function(m,d,nx,nz,agg,sp,R,face){if(m.story){sp*=1.4;if(m.cd>0)m.cd-=(m.hp<m.max*0.3?1.6:1);}return _bd(m,d,nx,nz,agg,sp,R,face);};}
 {const _bs=bossStart;bossStart=function(){_bs();const m=STY.boss;if(m){m.rad*=1.5;m.h*=KURO_S;m.d=Object.assign({},m.d,{scl:1});}STY.bolts=[];};}
