@@ -5120,7 +5120,7 @@ const STY_HITS=260,STY_MINSEC=180;
 {const _hp=hurtP;hurtP=function(dmg,src){const b=src&&(src.story?src:(src.src&&src.src.story?src.src:null));
   if(b&&b.atk>0&&STY.fight){const r=dmg/b.atk;dmg=(r*0.2*DS.maxHp+DS.defFlat)/Math.max(0.25,1-DS.defPct);}return _hp(dmg,src);};}
 {const _km=killMon;killMon=function(m,...a){if(m&&m.story&&m.lv0!=null){m.lv=m.lv0;m.lv0=null;}return _km(m,...a);};}
-{const _bd=bossDemon;bossDemon=function(m,d,nx,nz,agg,sp,R,face){if(m.story){sp*=1.4;if(m.cd>0)m.cd-=(m.hp<m.max*0.3?1.6:1);}return _bd(m,d,nx,nz,agg,sp,R,face);};}
+{const _bd=bossDemon;bossDemon=function(m,d,nx,nz,agg,sp,R,face){if(!m.story)return _bd(m,d,nx,nz,agg,sp,R,face);sp*=1.4;if(m.cd>0)m.cd-=(m.hp<m.max*0.3?1.6:1);const lv=m.lv;if(m.lv0!=null)m.lv=m.lv0;try{return _bd(m,d,nx,nz,agg,sp,R,face);}finally{m.lv=lv;}};}
 {const _bs=bossStart;bossStart=function(){_bs();const m=STY.boss;if(m){m.rad*=1.5;m.h*=KURO_S;m.d=Object.assign({},m.d,{scl:1});}STY.bolts=[];};}
 
 // ================= Start / loop =================
